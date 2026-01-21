@@ -36,6 +36,10 @@ app.use("/api/chat", chatRoutes);
 
 app.use("/api/search", searchRoutes);
 
+app.get("/", (req, res) => {
+  res.send("welcome to dry clean...");
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
