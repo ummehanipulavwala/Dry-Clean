@@ -2,15 +2,15 @@ import express from "express";
 import { signup, signin ,getProfile, forgotPassword, createNewPassword } from "../controllers/authController.js";
 import {authMiddleware} from "../middleware/authMiddleware.js";
 import {authorizeRoles}  from "../middleware/authMiddleware.js";
-import validateFormat from "../middleware/userValidationMiddleware.js";
+import upload from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
 // SIGN UP
-router.post("/signup",validateFormat, signup);
+router.post("/signup", signup);
 
 // SIGN IN
-router.post("/signin", signin);
+router.post("/signin",signin);
 
 //Personal Information
 router.get("/profile", authMiddleware, getProfile);
@@ -18,6 +18,8 @@ router.get("/profile", authMiddleware, getProfile);
 router.post("/forgot-password", forgotPassword);
 
 router.post("/create-new-password", createNewPassword);
+
+router.post("/signup", upload.single("profileImage"), signup);
 
 // admin only route
 

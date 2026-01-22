@@ -19,65 +19,83 @@ export const signin = async (req, res) => {
     }
 
     // 3. Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password.trim(), user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
      const token = jwt.sign({ id: user._id,role:user.role }, process.env.JWT_SECRET, {
-      expiresIn: "1d"
+      expiresIn: "7d"
     });
 
-    res.json({ token, user });
+    res.json({ token , userId: user._id, role: user.role  });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-    // 4. Success response
-    // res.status(200).json({
-    //   message: "Login successful",
-    //   user: {
-    //     id: user._id,
-    //     name: user.name,
-    //     email: user.email,
-    //   },
-    // });
+// SIGN UP
 
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-//signup
 export const signup = async (req, res) => {
   try {
     const {
-      firstName,lastName,email,password,role,address,city,state,pincode,phone, gender,dob, country
+     firstName,  lastName,  email,  password ,  role ,  address,  city,  state,  pincode,  phone, gender,  dob, country
     } = req.body;
 
+    const profileImage = req.file
+      ? req.file.path
+      : null;
+
+    // Validate required fields
     if (
       !firstName || !lastName || !email || !password ||
       !address || !city || !state || !pincode ||
       !phone || !gender || !dob || !country
     ) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({
+        message: "All fields are required"
+      });
     }
 
-    const userExists = await User.findOne({ email });
-    if (userExists)
-      return res.status(400).json({ message: "User already exists" });
+    // 2️⃣ Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "User already exists"
+      });
+    }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // 3️⃣ Hash password
+    const hashedPassword = await bcrypt.hash(password.trim(), 10);
 
+    // 4️⃣ Create user
     const user = await User.create({
-      firstName,lastName,email,password: hashedPassword,role,address,city,state,pincode,phone, gender,dob, country,
-});
+      firstName,  lastName,  email,  password: hashedPassword,  role,  address,  city,  state,  pincode,  phone, gender,  dob, country, profileImage
+    });
 
-    res.status(201).json({ message: "User registered successfully" });
+    // 5️⃣ Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // 6️⃣ Response (don’t send password)
+    res.status(201).json({
+      message: "Signup successful",
+      token,
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      message: "Signup failed",
+      error: error.message
+    });
   }
 };
+
 /* ===== PERSONAL INFO (PROTECTED) ===== */
 export const getProfile = async (req, res) => {
   const user = await User.findById(req.user.id).select("-password");
@@ -88,13 +106,11 @@ export const getProfile = async (req, res) => {
 // FORGOT PASSWORD
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-
+    const email= req.body.email;
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "Email not registered" });
     }
-
     // Just confirm email exists
     res.status(200).json({
       message: "Email verified",
@@ -116,7 +132,7 @@ export const createNewPassword = async (req, res) => {
       return res.status(400).json({ message: "All fields required" });
     }
 
-    if (password !== confirmPassword) {
+    if (password.trim() !== confirmPassword.trim()) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
@@ -126,7 +142,7 @@ export const createNewPassword = async (req, res) => {
     }
 
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
+    user.password = await bcrypt.hash(password.trim(), salt);
 
     await user.save();
 

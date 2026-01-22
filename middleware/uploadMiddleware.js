@@ -1,27 +1,40 @@
 import multer from "multer";
 import path from "path";
 
+// Storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/services");
+    cb(null, "uploads/profiles");
   },
   filename: (req, file, cb) => {
+    const uniqueName =
+      Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(
       null,
-      `${Date.now()}-${file.originalname.replace(/\s+/g, "")}`
+      uniqueName + path.extname(file.originalname)
     );
-  },
+  }
 });
 
+// File filter (only images)
 const fileFilter = (req, file, cb) => {
-  const allowed = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-  if (allowed.includes(file.mimetype)) {
+  if (
+    file.mimetype === "image/jpeg" ||
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg"
+  ) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files allowed"), false);
+    cb(new Error("Only images allowed"), false);
   }
 };
 
-const upload = multer({ storage, fileFilter});
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB
+  }
+});
 
 export default upload;

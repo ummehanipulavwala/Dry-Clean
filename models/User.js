@@ -4,10 +4,12 @@ const userSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
+      trim: true,
       required: true,
     },
     lastName: {
       type: String,
+      trim: true,
       required: true,
     },
     dob: {
@@ -22,11 +24,13 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["User", "Admin", "Shop"],
+      trim: true,
       default: "User"
     },
     email: {
       type: String,
       required: true,
+      trim: true,
       unique: true,
       lowercase: true,
       match: [/^\S+$/, "Spaces not allowed"]
@@ -34,6 +38,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
+      trim: true,
       match: [/^\S+$/, "Spaces not allowed"]
     },
     address: {
@@ -53,9 +58,12 @@ const userSchema = new mongoose.Schema(
       required: true
     },
     recentSearches: {
-    type: [String],
-    default: []
-  }
+      type: [String],
+      default: []
+  },
+    profileImage: {
+       type: String
+},
 },
   { timestamps: true }
 );
