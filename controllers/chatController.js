@@ -1,51 +1,40 @@
 import Chat from "../models/Chat.js";
 import Message from "../models/Message.js";
 
-/**
- * Create or Get Chat
- */
-export const accessChat = async (req, res) => {
+//send message
+export const sendMessage = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { userId, text } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ message: "UserId required" });
+    if (!text || !userId) {
+      return res.status(400).json({ message: "Text and userId are required" });
     }
 
     let chat = await Chat.findOne({
       members: { $all: [req.user.id, userId] },
-    }).populate("members", "firstName lastName role");
+    });
 
     if (!chat) {
       chat = await Chat.create({
         members: [req.user.id, userId],
       });
     }
+    const targetChatId = chat._id;
 
-    res.status(200).json(chat);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-/**
- * Send Message
- */
-export const sendMessage = async (req, res) => {
-  try {
-    const { chatId, text } = req.body;
-
-    if (!chatId || !text) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    const now = new Date(); // Using the current time context
+    const date = now.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     const message = await Message.create({
-      chatId,
+      chatId: targetChatId,
       sender: req.user.id,
       text,
+      date,
+      time,
+      reciever: userId,
     });
 
-    await Chat.findByIdAndUpdate(chatId, {
+    await Chat.findByIdAndUpdate(targetChatId, {
       lastMessage: text,
     });
 
@@ -55,9 +44,7 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-/**
- * Get All Messages (Continuous Chat)
- */
+//get messages
 export const getMessages = async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -72,9 +59,7 @@ export const getMessages = async (req, res) => {
   }
 };
 
-/**
- * Get All Chats (Recent Chats)
- */
+// get all chats(recent chats)
 export const getMyChats = async (req, res) => {
   try {
     const chats = await Chat.find({

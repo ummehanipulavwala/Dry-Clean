@@ -8,8 +8,13 @@ const serviceSchema = new mongoose.Schema(
       unique: true, // No duplicate services
       trim: true,
     },
-     description: String,
-     image: {
+    shop: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    description: String,
+    image: {
       type: String, // image path or URL
     },
     price: {
@@ -29,7 +34,7 @@ const serviceSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, versionKey: false }
 );
 
 export default mongoose.model("Service", serviceSchema);

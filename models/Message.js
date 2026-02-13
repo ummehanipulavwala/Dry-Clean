@@ -21,8 +21,17 @@ const messageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    date: {
+      type: String,
+    },
+    time: {
+      type: String,
+    },
+    reciever: {
+      type: String,
+    },
   },
-  { timestamps: true }
+  { timestamps: true, versionKey: false }
 );
 
 export default mongoose.model("Message", messageSchema);

@@ -1,5 +1,5 @@
 import express from "express";
-import {createService,getAllServices,updateService,deleteService,} from "../controllers/serviceController.js";
+import { createService, getAllServices, updateService, deleteService, getServiceById } from "../controllers/serviceController.js";
 import { authMiddleware, authorizeRoles } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
 
@@ -15,6 +15,9 @@ router.post(
 
 // Public – Get all services
 router.get("/", getAllServices);
+
+// Public - Get Single Service by ID (Place this after specific paths)
+router.get("/:id", getServiceById);
 
 // Admin / Shop update service
 router.put(

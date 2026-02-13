@@ -1,7 +1,7 @@
 import express from "express";
-import { signup, signin ,getProfile, forgotPassword, createNewPassword } from "../controllers/authController.js";
-import {authMiddleware} from "../middleware/authMiddleware.js";
-import {authorizeRoles}  from "../middleware/authMiddleware.js";
+import { signup, signin, getProfile, forgotPassword, createNewPassword, saveuserdetails } from "../controllers/authController.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+import { authorizeRoles } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
@@ -10,7 +10,7 @@ const router = express.Router();
 router.post("/signup", signup);
 
 // SIGN IN
-router.post("/signin",signin);
+router.post("/signin", signin);
 
 //Personal Information
 router.get("/profile", authMiddleware, getProfile);
@@ -19,14 +19,16 @@ router.post("/forgot-password", forgotPassword);
 
 router.post("/create-new-password", createNewPassword);
 
-router.post("/signup", upload.single("profileImage"), signup);
+router.post("/signup", signup);
+
+router.put("/saveuserdetails/:userId", upload.single("profileImage"), saveuserdetails);
 
 // admin only route
 
 router.get(
   "/admin/dashboard",
   authMiddleware,
-  authorizeRoles("admin"),
+  authorizeRoles("Admin"),
   (req, res) => {
     res.json({ message: "Welcome Admin" });
   }
@@ -37,7 +39,7 @@ router.get(
 router.get(
   "/shop/profile",
   authMiddleware,
-  authorizeRoles("shop"),
+  authorizeRoles("Shop"),
   (req, res) => {
     res.json({ message: "Welcome Shop Owner" });
   }
@@ -46,8 +48,8 @@ router.get(
 // user+admin access
 router.get(
   "/profile",
-    authMiddleware,
-  authorizeRoles("user", "admin"),
+  authMiddleware,
+  authorizeRoles("User", "Admin"),
   (req, res) => {
     res.json({ message: "Profile access granted" });
   }

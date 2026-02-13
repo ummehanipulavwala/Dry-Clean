@@ -5,21 +5,17 @@ const userSchema = new mongoose.Schema(
     firstName: {
       type: String,
       trim: true,
-      required: true,
     },
     lastName: {
       type: String,
       trim: true,
-      required: true,
     },
     dob: {
       type: Date,
-      required: true
     },
     gender: {
       type: String,
       enum: ["Male", "Female", "Other"],
-      required: true
     },
     role: {
       type: String,
@@ -35,6 +31,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       match: [/^\S+$/, "Spaces not allowed"]
     },
+    phone: {
+      type: Number,
+      match: [/^[6-9]\d{9}$/, "10 digit valid Indian number"]
+    },
     password: {
       type: String,
       required: true,
@@ -43,29 +43,36 @@ const userSchema = new mongoose.Schema(
     },
     address: {
       type: String,
-      required: true
     },
     city: {
       type: String,
-      required: true
     },
     pincode: {
-      type: String,
-      required: true
+      type: Number,
+      match: [/^[1-9][0-9]{5}$/, "6 digit valid Indian pincode"]
     },
     country: {
       type: String,
-      required: true
     },
     recentSearches: {
       type: [String],
       default: []
-  },
+    },
+    recentlyViewedShops: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ShopDetails",
+      },
+    ],
     profileImage: {
-       type: String
-},
-},
-  { timestamps: true }
+      type: String
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true, versionKey: false }
 );
 
 export default mongoose.model("User", userSchema);

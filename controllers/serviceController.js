@@ -3,22 +3,14 @@ import Service from "../models/servicemodel.js";
 //create service for admin
 export const createService = async (req, res) => {
   try {
-    if (req.user.role !== "shop") {
+    if (req.user.role !== "Shop") {
       return res.status(403).json({ message: "Only shops can add services" });
     }
-    const { name, description, price } = req.body;
+    const { name, description, price, category, city } = req.body;
 
-    const services = await Service.create({
-      shop: req.user.id,
-      name,
-      price,
-      description,
-      image: req.file ? `/uploads/services/${req.file.filename}` : null,
-    });
-
-    if (!name || !price) {
+    if (!name || !price || !category || !city) {
       return res.status(400).json({
-        message: "Service name and price are required",
+        message: "Service name, price, category and city are required",
       });
     }
 
@@ -29,16 +21,27 @@ export const createService = async (req, res) => {
         message: "Service already exists",
       });
     }
-      res.status(201).json(service);
+
+    const service = await Service.create({
+      shop: req.user.id,
+      name,
+      price,
+      description,
+      category,
+      city,
+      image: req.file ? `/uploads/services/${req.file.filename}` : null,
+    });
+
+    res.status(201).json(service);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// create get all services
+// get all services (public)
 export const getAllServices = async (req, res) => {
   try {
-    const services = await Service.find({ isActive: true });
+    const services = await Service.find({ isActive: true }).populate("shop", "firstName lastName city");
 
     res.status(200).json({
       count: services.length,
@@ -49,6 +52,22 @@ export const getAllServices = async (req, res) => {
       message: "Error fetching services",
       error: error.message,
     });
+  }
+};
+
+// Get Single Service by ID
+export const getServiceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const service = await Service.findById(id).populate("shop", "firstName lastName city");
+
+    if (!service) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    res.status(200).json(service);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching service", error: error.message });
   }
 };
 

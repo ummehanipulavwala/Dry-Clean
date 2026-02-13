@@ -1,5 +1,6 @@
 import Service from "../models/servicemodel.js";
 import User from "../models/User.js";
+import ShopDetails from "../models/Shopdetails.js";
 
 // Search Services Controller
 // GET /api/search/services?q=searchText
@@ -13,9 +14,14 @@ export const searchServices = async (req, res) => {
     }
 
     // Search logic
-    const results = await Service.find({
-      serviceName: { $regex: searchText, $options: "i" }
-    });
+    const [services, shops] = await Promise.all([
+      Service.find({
+        name: { $regex: searchText, $options: "i" }
+      }),
+      ShopDetails.find({
+        shopName: { $regex: searchText, $options: "i" }
+      })
+    ]);
 
     // Update recent searches
     await User.findByIdAndUpdate(userId, {
@@ -33,8 +39,9 @@ export const searchServices = async (req, res) => {
     });
 
     res.status(200).json({
-      count: results.length,
-      results
+      count: services.length + shops.length,
+      services,
+      shops
     });
 
   } catch (error) {
@@ -43,7 +50,7 @@ export const searchServices = async (req, res) => {
 };
 
 //GET RECENT SEARCHES       GET /api/search/recent
- 
+
 export const getRecentSearches = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("recentSearches");
