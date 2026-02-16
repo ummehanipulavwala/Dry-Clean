@@ -8,7 +8,7 @@ import serviceRoutes from "./routes/serviceRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js";
-import shopDetailsRoutes from "./routes/shopdetailsRoutes.js";
+import shopDetailsRoutes from "./routes/shopDetailsRoutes.js";
 import advertisementRoutes from "./routes/advertisementRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import socketIO from "./socket.js";
