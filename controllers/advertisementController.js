@@ -1,4 +1,5 @@
 import Advertisement from "../models/advertisementModel.js";
+import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 // Get a random active advertisement for logout
 export const getLogoutAdvertisement = async (req, res) => {
@@ -6,15 +7,15 @@ export const getLogoutAdvertisement = async (req, res) => {
         const count = await Advertisement.countDocuments({ isActive: true });
 
         if (count === 0) {
-            return res.status(404).json({ success: false, message: "No active advertisements found" });
+            return sendError(res, 404, "No active advertisements found");
         }
 
         const random = Math.floor(Math.random() * count);
         const ad = await Advertisement.findOne({ isActive: true }).skip(random);
 
-        res.status(200).json({ success: true, data: ad });
+        sendSuccess(res, 200, "Advertisement fetched", ad);
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server Error", error: error.message });
+        sendError(res, 500, "Server Error", error.message);
     }
 };
 
@@ -30,8 +31,8 @@ export const createAdvertisement = async (req, res) => {
         });
 
         const savedAd = await newAd.save();
-        res.status(201).json({ success: true, data: savedAd });
+        sendSuccess(res, 201, "Advertisement created", savedAd);
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server Error", error: error.message });
+        sendError(res, 500, "Server Error", error.message);
     }
 };

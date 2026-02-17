@@ -19,19 +19,19 @@ router.get("/recent", authMiddleware, getRecentlyViewedShops);
 router.post(
     "/",
     authMiddleware,
-    authorizeRoles("Shop"),
+    authorizeRoles("Shop", "Admin"),
     upload.single("shopImage"),
     createShopDetails
 );
 
 // Get My Shop Details
-router.get("/me", authMiddleware, authorizeRoles("Shop"), getMyShopDetails);
+router.get("/me", authMiddleware, authorizeRoles("Shop", "Admin"), getMyShopDetails);
 
 // Update Shop Details
 router.put(
     "/",
     authMiddleware,
-    authorizeRoles("Shop"),
+    authorizeRoles("Shop", "Admin"),
     upload.single("shopImage"),
     updateShopDetails
 );

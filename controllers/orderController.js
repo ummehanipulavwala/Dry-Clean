@@ -1,5 +1,6 @@
 import Order from "../models/Order.js";
 import ShopOrderAction from "../models/ShopOrderAction.js";
+import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 // Create a new order
 export const createOrder = async (req, res) => {
@@ -7,7 +8,7 @@ export const createOrder = async (req, res) => {
         const { shop, items, pickupAddress, deliveryAddress, pickupSchedule, totalAmount } = req.body;
 
         if (!shop || !items || items.length === 0 || !pickupAddress || !deliveryAddress || !pickupSchedule || !totalAmount) {
-            return res.status(400).json({ success: false, message: "All required fields must be provided" });
+            return sendError(res, 400, "All required fields must be provided");
         }
 
         const newOrder = await Order.create({
@@ -20,9 +21,9 @@ export const createOrder = async (req, res) => {
             totalAmount,
         });
 
-        res.status(201).json({ success: true, data: newOrder });
+        sendSuccess(res, 201, "Order created successfully", newOrder);
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        sendError(res, 500, error.message);
     }
 };
 
@@ -34,9 +35,9 @@ export const getMyOrders = async (req, res) => {
             .populate("items.service", "name price")
             .sort({ createdAt: -1 });
 
-        res.status(200).json({ success: true, data: orders });
+        sendSuccess(res, 200, "Orders fetched successfully", orders);
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        sendError(res, 500, error.message);
     }
 };
 
@@ -46,13 +47,13 @@ export const respondToOrder = async (req, res) => {
         const { orderId, action, reason } = req.body;
 
         if (!orderId || !action || !["Accept", "Reject"].includes(action)) {
-            return res.status(400).json({ success: false, message: "Invalid action or orderId" });
+            return sendError(res, 400, "Invalid action or orderId");
         }
 
         const order = await Order.findById(orderId);
 
         if (!order) {
-            return res.status(404).json({ success: false, message: "Order not found" });
+            return sendError(res, 404, "Order not found");
         }
 
         // Capture the action in ShopOrderAction
@@ -72,8 +73,8 @@ export const respondToOrder = async (req, res) => {
 
         await order.save();
 
-        res.status(200).json({ success: true, message: `Order ${action}ed successfully`, data: shopAction });
+        sendSuccess(res, 200, `Order ${action}ed successfully`, shopAction);
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        sendError(res, 500, error.message);
     }
 };

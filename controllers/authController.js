@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 // SIGN IN
 export const signin = async (req, res) => {
@@ -9,27 +10,27 @@ export const signin = async (req, res) => {
 
     // 1. Check fields
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: "All fields are required" });
+      return sendError(res, 400, "All fields are required");
     }
 
     // 2. Check user exists
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ success: false, message: "Invalid email or password" });
+      return sendError(res, 401, "Invalid email or password");
     }
 
     // 3. Compare password
     const isMatch = await bcrypt.compare(password.trim(), user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: "Invalid email or password" });
+      return sendError(res, 401, "Invalid email or password");
     }
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "7d"
     });
 
-    res.json({ success: true, data: { token, userId: user._id, role: user.role } });
+    sendSuccess(res, 200, "Login successful", { token, userId: user._id, role: user.role });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    sendError(res, 500, error.message);
   }
 };
 
@@ -40,19 +41,13 @@ export const signup = async (req, res) => {
 
     // Validate input
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
+      return sendError(res, 400, "Email and password are required");
     }
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({
-        success: false,
-        message: "User already exists",
-      });
+      return sendError(res, 400, "User already exists");
     }
 
     // Hash password
@@ -72,18 +67,11 @@ export const signup = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      data: { userId: user._id, token },
-    });
+    sendSuccess(res, 201, "User created successfully", { userId: user._id, token });
+
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Signup failed",
-      error: error.message,
-    });
+    sendError(res, 500, "Signup failed", error.message);
   }
 };
 
@@ -96,17 +84,14 @@ export const saveuserdetails = async (req, res) => {
     } = req.body;
 
     if (!userId) {
-      return res.status(400).json({ success: false, message: "User ID is required" });
+      return sendError(res, 400, "User ID is required");
     }
     const user = await User.findById(userId);
 
 
     //Check user exists
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Invalid user ID",
-      });
+      return sendError(res, 404, "Invalid user ID");
     }
 
     const profileImage = req.file
@@ -118,27 +103,18 @@ export const saveuserdetails = async (req, res) => {
       !firstName || !lastName || !address || !city || !state || !pincode ||
       !phone || !gender || !dob || !country || !role
     ) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required..."
-      });
+      return sendError(res, 400, "All fields are required...");
     }
 
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(phone)) {
-      return res.status(400).json({
-        success: false,
-        message: "Phone number must be exactly 10 digits",
-      });
+      return sendError(res, 400, "Phone number must be exactly 10 digits");
     }
 
     // Pincode validation (6 digits)
     const pincodeRegex = /^[0-9]{6}$/;
     if (!pincodeRegex.test(pincode)) {
-      return res.status(400).json({
-        success: false,
-        message: "Pincode must be exactly 6 digits",
-      });
+      return sendError(res, 400, "Pincode must be exactly 6 digits");
     }
 
     //DOB validation (05 Jan 2001)
@@ -146,19 +122,13 @@ export const saveuserdetails = async (req, res) => {
       /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (19|20)\d{2}$/;
 
     if (!dobRegex.test(dob)) {
-      return res.status(400).json({
-        success: false,
-        message: "Date of birth must be in format: DD Mon YYYY (e.g. 05 Jan 2001)",
-      });
+      return sendError(res, 400, "Date of birth must be in format: DD Mon YYYY (e.g. 05 Jan 2001)");
     }
 
     //Convert string DOB to Date
     const parsedDob = new Date(dob);
     if (isNaN(parsedDob)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid date of birth",
-      });
+      return sendError(res, 400, "Invalid date of birth");
     }
 
     // Create user
@@ -195,25 +165,17 @@ export const saveuserdetails = async (req, res) => {
     });
 
     // Response (don’t send password)
-    res.status(201).json({
-      success: true,
-      message: "User details saved successfully",
-      data: { user: user.id },
-    });
+    sendSuccess(res, 201, "User details saved successfully", { user: user.id });
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to save user details",
-      error: error.message
-    });
+    sendError(res, 500, "Failed to save user details", error.message);
   }
 };
 
 /* ===== PERSONAL INFO (PROTECTED) ===== */
 export const getProfile = async (req, res) => {
   const user = await User.findById(req.user.id).select("-password");
-  res.json({ success: true, message: "Profile fetched successfully", data: user });
+  sendSuccess(res, 200, "Profile fetched successfully", user);
 };
 
 // FORGOT PASSWORD
@@ -222,17 +184,13 @@ export const forgotPassword = async (req, res) => {
     const email = req.body.email;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: "Email not registered" });
+      return sendError(res, 404, "Email not registered");
     }
     // Just confirm email exists
-    res.status(200).json({
-      success: true,
-      message: "Email verified",
-      data: { email: user.email }
-    });
+    sendSuccess(res, 200, "Email verified", { email: user.email });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendError(res, 500, error.message);
   }
 };
 
@@ -242,16 +200,16 @@ export const createNewPassword = async (req, res) => {
     const { email, password, confirmPassword } = req.body;
 
     if (!password || !confirmPassword) {
-      return res.status(400).json({ success: false, message: "All fields required" });
+      return sendError(res, 400, "All fields required");
     }
 
     if (password.trim() !== confirmPassword.trim()) {
-      return res.status(400).json({ success: false, message: "Passwords do not match" });
+      return sendError(res, 400, "Passwords do not match");
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return sendError(res, 404, "User not found");
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -259,9 +217,9 @@ export const createNewPassword = async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({ success: true, message: "Password updated successfully" });
+    sendSuccess(res, 200, "Password updated successfully");
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    sendError(res, 500, error.message);
   }
 };

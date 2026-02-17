@@ -1,5 +1,6 @@
 import Chat from "../models/Chat.js";
 import Message from "../models/Message.js";
+import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 //send message
 export const sendMessage = async (req, res) => {
@@ -7,7 +8,7 @@ export const sendMessage = async (req, res) => {
     const { userId, text } = req.body;
 
     if (!text || !userId) {
-      return res.status(400).json({ success: false, message: "Text and userId are required" });
+      return sendError(res, 400, "Text and userId are required");
     }
 
     let chat = await Chat.findOne({
@@ -38,9 +39,9 @@ export const sendMessage = async (req, res) => {
       lastMessage: text,
     });
 
-    res.status(201).json({ success: true, data: message });
+    sendSuccess(res, 201, "Message sent", message);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendError(res, 500, error.message);
   }
 };
 
@@ -53,9 +54,9 @@ export const getMessages = async (req, res) => {
       .populate("sender", "firstName lastName role")
       .sort({ createdAt: 1 });
 
-    res.status(200).json({ success: true, data: messages });
+    sendSuccess(res, 200, "Messages fetched", messages);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendError(res, 500, error.message);
   }
 };
 
@@ -68,8 +69,8 @@ export const getMyChats = async (req, res) => {
       .populate("members", "firstName lastName role")
       .sort({ updatedAt: -1 });
 
-    res.status(200).json({ success: true, data: chats });
+    sendSuccess(res, 200, "Chats fetched", chats);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendError(res, 500, error.message);
   }
 };

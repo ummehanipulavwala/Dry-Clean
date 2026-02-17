@@ -1,27 +1,22 @@
 import Service from "../models/servicemodel.js";
+import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 //create service for admin
 export const createService = async (req, res) => {
   try {
     if (req.user.role !== "Shop") {
-      return res.status(403).json({ success: false, message: "Only shops can add services" });
+      return sendError(res, 403, "Only shops can add services");
     }
     const { name, description, price, category, city } = req.body;
 
     if (!name || !price || !category || !city) {
-      return res.status(400).json({
-        success: false,
-        message: "Service name, price, category and city are required",
-      });
+      return sendError(res, 400, "Service name, price, category and city are required");
     }
 
     const existingService = await Service.findOne({ name });
 
     if (existingService) {
-      return res.status(409).json({
-        success: false,
-        message: "Service already exists",
-      });
+      return sendError(res, 409, "Service already exists");
     }
 
     const service = await Service.create({
@@ -34,9 +29,9 @@ export const createService = async (req, res) => {
       image: req.file ? `/uploads/services/${req.file.filename}` : null,
     });
 
-    res.status(201).json({ success: true, data: service });
+    sendSuccess(res, 201, "Service created successfully", service);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendError(res, 500, error.message);
   }
 };
 
@@ -45,17 +40,9 @@ export const getAllServices = async (req, res) => {
   try {
     const services = await Service.find({ isActive: true }).populate("shop", "firstName lastName city");
 
-    res.status(200).json({
-      success: true,
-      count: services.length,
-      data: services,
-    });
+    sendSuccess(res, 200, "Services fetched successfully", { count: services.length, services });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching services",
-      error: error.message,
-    });
+    sendError(res, 500, "Error fetching services", error.message);
   }
 };
 
@@ -66,12 +53,12 @@ export const getServiceById = async (req, res) => {
     const service = await Service.findById(id).populate("shop", "firstName lastName city");
 
     if (!service) {
-      return res.status(404).json({ success: false, message: "Service not found" });
+      return sendError(res, 404, "Service not found");
     }
 
-    res.status(200).json({ success: true, data: service });
+    sendSuccess(res, 200, "Service fetched successfully", service);
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching service", error: error.message });
+    sendError(res, 500, "Error fetching service", error.message);
   }
 };
 
@@ -87,23 +74,12 @@ export const updateService = async (req, res) => {
     );
 
     if (!service) {
-      return res.status(404).json({
-        success: false,
-        message: "Service not found",
-      });
+      return sendError(res, 404, "Service not found");
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Service updated successfully",
-      data: service,
-    });
+    sendSuccess(res, 200, "Service updated successfully", service);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error updating service",
-      error: error.message,
-    });
+    sendError(res, 500, "Error updating service", error.message);
   }
 };
 
@@ -119,21 +95,11 @@ export const deleteService = async (req, res) => {
     );
 
     if (!service) {
-      return res.status(404).json({
-        success: false,
-        message: "Service not found",
-      });
+      return sendError(res, 404, "Service not found");
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Service deleted successfully",
-    });
+    sendSuccess(res, 200, "Service deleted successfully");
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error deleting service",
-      error: error.message,
-    });
+    sendError(res, 500, "Error deleting service", error.message);
   }
 };

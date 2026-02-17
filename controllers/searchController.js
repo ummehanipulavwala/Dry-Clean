@@ -1,6 +1,7 @@
 import Service from "../models/servicemodel.js";
 import User from "../models/User.js";
 import ShopDetails from "../models/Shopdetails.js";
+import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 // Search Services Controller
 // GET /api/search/services?q=searchText
@@ -10,7 +11,7 @@ export const searchServices = async (req, res) => {
     const userId = req.user.id;
 
     if (!searchText) {
-      return res.status(400).json({ success: false, message: "Search text is required" });
+      return sendError(res, 400, "Search text is required");
     }
 
     // Search logic
@@ -38,14 +39,10 @@ export const searchServices = async (req, res) => {
       }
     });
 
-    res.status(200).json({
-      success: true,
-      count: services.length + shops.length,
-      data: { services, shops }
-    });
+    sendSuccess(res, 200, "Search results", { services, shops, count: services.length + shops.length });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendError(res, 500, error.message);
   }
 };
 
@@ -55,8 +52,8 @@ export const getRecentSearches = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("recentSearches");
 
-    res.status(200).json({ success: true, data: user.recentSearches });
+    sendSuccess(res, 200, "Recent searches", user.recentSearches);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    sendError(res, 500, error.message);
   }
 };
