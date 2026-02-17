@@ -1,7 +1,10 @@
 import ShopDetails from "../models/Shopdetails.js";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+<<<<<<< HEAD
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
+=======
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
 
 
 // Create Shop Details
@@ -13,7 +16,11 @@ export const createShopDetails = async (req, res) => {
         // Check if shop details already exist for this user
         const existingShop = await ShopDetails.findOne({ userId });
         if (existingShop) {
+<<<<<<< HEAD
             return sendError(res, 400, "Shop details already exist");
+=======
+            return res.status(400).json({ message: "Shop details already exist" });
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
         }
 
         const shopImage = req.file ? `/uploads/profiles/${req.file.filename}` : "";
@@ -26,9 +33,15 @@ export const createShopDetails = async (req, res) => {
             shopImage,
         });
 
+<<<<<<< HEAD
         sendSuccess(res, 201, "Shop details created successfully", shopDetails);
     } catch (error) {
         sendError(res, 500, error.message);
+=======
+        res.status(201).json(shopDetails);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     }
 };
 
@@ -38,12 +51,21 @@ export const getMyShopDetails = async (req, res) => {
         const shopDetails = await ShopDetails.findOne({ userId: req.user.id });
 
         if (!shopDetails) {
+<<<<<<< HEAD
             return sendError(res, 404, "Shop details not found");
         }
 
         sendSuccess(res, 200, "Shop details fetched successfully", shopDetails);
     } catch (error) {
         sendError(res, 500, error.message);
+=======
+            return res.status(404).json({ message: "Shop details not found" });
+        }
+
+        res.status(200).json(shopDetails);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     }
 };
 
@@ -70,12 +92,21 @@ export const updateShopDetails = async (req, res) => {
         );
 
         if (!shopDetails) {
+<<<<<<< HEAD
             return sendError(res, 404, "Shop details not found");
         }
 
         sendSuccess(res, 200, "Shop details updated successfully", shopDetails);
     } catch (error) {
         sendError(res, 500, error.message);
+=======
+            return res.status(404).json({ message: "Shop details not found" });
+        }
+
+        res.status(200).json(shopDetails);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     }
 };
 
@@ -83,9 +114,15 @@ export const updateShopDetails = async (req, res) => {
 export const getAllShops = async (req, res) => {
     try {
         const shops = await ShopDetails.find().populate("userId", "firstName lastName email city");
+<<<<<<< HEAD
         sendSuccess(res, 200, "Shops fetched successfully", shops);
     } catch (error) {
         sendError(res, 500, error.message);
+=======
+        res.status(200).json(shops);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     }
 };
 
@@ -94,7 +131,11 @@ export const getShopById = async (req, res) => {
     try {
         const shop = await ShopDetails.findById(req.params.id).populate("userId", "firstName lastName email city");
         if (!shop) {
+<<<<<<< HEAD
             return sendError(res, 404, "Shop not found");
+=======
+            return res.status(404).json({ message: "Shop not found" });
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
         }
 
         // Record view if user is logged in
@@ -125,9 +166,15 @@ export const getShopById = async (req, res) => {
             }
         }
 
+<<<<<<< HEAD
         sendSuccess(res, 200, "Shop details fetched successfully", shop);
     } catch (error) {
         sendError(res, 500, error.message);
+=======
+        res.status(200).json(shop);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     }
 };
 
@@ -143,12 +190,21 @@ export const getRecentlyViewedShops = async (req, res) => {
         });
 
         if (!user) {
+<<<<<<< HEAD
             return sendError(res, 404, "User not found");
         }
 
         sendSuccess(res, 200, "Recently viewed shops fetched successfully", user.recentlyViewedShops);
     } catch (error) {
         sendError(res, 500, error.message);
+=======
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json(user.recentlyViewedShops);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     }
 };
 

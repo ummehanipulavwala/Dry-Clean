@@ -19,19 +19,31 @@ router.get("/recent", authMiddleware, getRecentlyViewedShops);
 router.post(
     "/",
     authMiddleware,
+<<<<<<< HEAD
     authorizeRoles("Shop", "Admin"),
+=======
+    authorizeRoles("Shop"),
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     upload.single("shopImage"),
     createShopDetails
 );
 
 // Get My Shop Details
+<<<<<<< HEAD
 router.get("/me", authMiddleware, authorizeRoles("Shop", "Admin"), getMyShopDetails);
+=======
+router.get("/me", authMiddleware, authorizeRoles("Shop"), getMyShopDetails);
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
 
 // Update Shop Details
 router.put(
     "/",
     authMiddleware,
+<<<<<<< HEAD
     authorizeRoles("Shop", "Admin"),
+=======
+    authorizeRoles("Shop"),
+>>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     upload.single("shopImage"),
     updateShopDetails
 );
