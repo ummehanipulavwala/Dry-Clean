@@ -32,13 +32,8 @@ const userSchema = new mongoose.Schema(
       match: [/^\S+$/, "Spaces not allowed"]
     },
     phone: {
-<<<<<<< HEAD
       type: String,
       match: [/^\d{10}$/, "Phone number must be exactly 10 digits"]
-=======
-      type: Number,
-      match: [/^[6-9]\d{9}$/, "10 digit valid Indian number"]
->>>>>>> 30942aec6a614d58d068ec75d3d899063eeabd0e
     },
     password: {
       type: String,
