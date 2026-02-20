@@ -100,16 +100,15 @@ export const saveuserdetails = async (req, res) => {
 
     // Validate required fields
     if (
-      !firstName || !lastName || !address || !city || !state || !pincode ||
-      !phone || !gender || !dob || !country || !role
+      !firstName || !lastName || !address || !city || !state || !pincode || !gender || !dob || !country
     ) {
       return sendError(res, 400, "All fields are required...");
     }
 
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(phone)) {
-      return sendError(res, 400, "Phone number must be exactly 10 digits");
-    }
+    // const phoneRegex = /^[0-9]{10}$/;
+    // if (!phoneRegex.test(phone)) {
+    //   return sendError(res, 400, "Phone number must be exactly 10 digits");
+    // }
 
     // Pincode validation (6 digits)
     const pincodeRegex = /^[0-9]{6}$/;
@@ -117,18 +116,23 @@ export const saveuserdetails = async (req, res) => {
       return sendError(res, 400, "Pincode must be exactly 6 digits");
     }
 
-    //DOB validation (05 Jan 2001)
-    const dobRegex =
-      /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (19|20)\d{2}$/;
+    //DOB validation (13-02-2003)
+    const dobRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(19|20)\d{2}$/;
 
     if (!dobRegex.test(dob)) {
-      return sendError(res, 400, "Date of birth must be in format: DD Mon YYYY (e.g. 05 Jan 2001)");
+      return sendError(res, 400, "Date of birth must be in format: DD-MM-YYYY (e.g. 13-02-2003)");
     }
 
-    //Convert string DOB to Date
-    const parsedDob = new Date(dob);
-    if (isNaN(parsedDob)) {
-      return sendError(res, 400, "Invalid date of birth");
+    //Convert string DOB (DD-MM-YYYY) to Date and check for validity (no rollover)
+    const [day, month, year] = dob.split("-");
+    const parsedDob = new Date(`${year}-${month}-${day}`);
+    if (
+      isNaN(parsedDob.getTime()) ||
+      parsedDob.getDate() !== parseInt(day) ||
+      parsedDob.getMonth() + 1 !== parseInt(month) ||
+      parsedDob.getFullYear() !== parseInt(year)
+    ) {
+      return sendError(res, 400, "Invalid date of birth (e.g. 31-02-2003 is not valid)");
     }
 
     // Create user
@@ -157,13 +161,6 @@ export const saveuserdetails = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    //Format DOB for response
-    const formattedDob = parsedDob.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
     // Response (don’t send password)
     sendSuccess(res, 201, "User details saved successfully", { user: user.id });
 
@@ -174,8 +171,12 @@ export const saveuserdetails = async (req, res) => {
 
 /* ===== PERSONAL INFO (PROTECTED) ===== */
 export const getProfile = async (req, res) => {
-  const user = await User.findById(req.user.id).select("-password");
-  sendSuccess(res, 200, "Profile fetched successfully", user);
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    sendSuccess(res, 200, "Profile fetched successfully", user);
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
 };
 
 // FORGOT PASSWORD

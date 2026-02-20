@@ -4,7 +4,7 @@ import { sendSuccess, sendError } from "../utils/responseHandler.js";
 // Get my profile
 export const getMyProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id).select("-password").lean();
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -19,7 +19,7 @@ export const getMyProfile = async (req, res) => {
 // Get user by ID (Admin only)
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id).select("-password").lean();
 
     if (!user) {
       return sendError(res, 404, "User not found");
@@ -58,7 +58,25 @@ export const updateUser = async (req, res) => {
       return sendError(res, 403, "Access denied");
     }
 
-    const { firstName, lastName, email, password, role, address, city, state, pincode, phone, gender, dob, country, profileImage } = req.body;
+    const { firstName, lastName, email, password, role, address, city, state, pincode, phone, gender, dob, country, profileImage, status } = req.body;
+
+    // DOB validation if provided
+    if (dob) {
+      const dobRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(19|20)\d{2}$/;
+      if (!dobRegex.test(dob)) {
+        return sendError(res, 400, "Date of birth must be in format: DD-MM-YYYY (e.g. 13-02-2003)");
+      }
+      const [day, month, year] = dob.split("-");
+      const parsedDob = new Date(`${year}-${month}-${day}`);
+      if (
+        isNaN(parsedDob.getTime()) ||
+        parsedDob.getDate() !== parseInt(day) ||
+        parsedDob.getMonth() + 1 !== parseInt(month) ||
+        parsedDob.getFullYear() !== parseInt(year)
+      ) {
+        return sendError(res, 400, "Invalid date of birth (e.g. 31-02-2003 is not valid)");
+      }
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
@@ -77,6 +95,7 @@ export const updateUser = async (req, res) => {
           ...(gender && { gender }),
           ...(dob && { dob }),
           ...(country && { country }),
+          ...(status && { status }),
           ...((req.file ? req.file.path : profileImage) && { profileImage: req.file ? req.file.path : profileImage }),
         },
       },

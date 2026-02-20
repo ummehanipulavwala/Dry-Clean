@@ -23,7 +23,7 @@ export const sendMessage = async (req, res) => {
     const targetChatId = chat._id;
 
     const now = new Date(); // Using the current time context
-    const date = now.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    const date = now.toLocaleDateString('en-GB').replace(/\//g, '-'); // DD-MM-YYYY
     const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     const message = await Message.create({
