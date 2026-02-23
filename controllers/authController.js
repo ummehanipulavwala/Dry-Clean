@@ -105,11 +105,6 @@ export const saveuserdetails = async (req, res) => {
       return sendError(res, 400, "All fields are required...");
     }
 
-    // const phoneRegex = /^[0-9]{10}$/;
-    // if (!phoneRegex.test(phone)) {
-    //   return sendError(res, 400, "Phone number must be exactly 10 digits");
-    // }
-
     // Pincode validation (6 digits)
     const pincodeRegex = /^[0-9]{6}$/;
     if (!pincodeRegex.test(pincode)) {

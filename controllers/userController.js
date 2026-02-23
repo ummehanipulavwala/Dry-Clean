@@ -59,6 +59,7 @@ export const updateUser = async (req, res) => {
     }
 
     const { firstName, lastName, email, password, role, address, city, state, pincode, phone, gender, dob, country, profileImage, status } = req.body;
+    let parsedDob = null;
 
     // DOB validation if provided
     if (dob) {
@@ -67,7 +68,7 @@ export const updateUser = async (req, res) => {
         return sendError(res, 400, "Date of birth must be in format: DD-MM-YYYY (e.g. 13-02-2003)");
       }
       const [day, month, year] = dob.split("-");
-      const parsedDob = new Date(`${year}-${month}-${day}`);
+      parsedDob = new Date(`${year}-${month}-${day}`);
       if (
         isNaN(parsedDob.getTime()) ||
         parsedDob.getDate() !== parseInt(day) ||
@@ -93,7 +94,7 @@ export const updateUser = async (req, res) => {
           ...(pincode && { pincode }),
           ...(phone && { phone }),
           ...(gender && { gender }),
-          ...(dob && { dob }),
+          ...(parsedDob && { dob: parsedDob }),
           ...(country && { country }),
           ...(status && { status }),
           ...((req.file ? req.file.path : profileImage) && { profileImage: req.file ? req.file.path : profileImage }),

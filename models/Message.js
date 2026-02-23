@@ -27,7 +27,7 @@ const messageSchema = new mongoose.Schema(
     time: {
       type: String,
     },
-    reciever: {
+    receiver: {
       type: String,
     },
   },
