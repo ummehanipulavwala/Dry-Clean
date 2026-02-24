@@ -31,6 +31,7 @@ export const createOrder = async (req, res) => {
 export const getMyOrders = async (req, res) => {
     try {
         const orders = await Order.find({ customer: req.user.id })
+            .populate("customer", "firstName lastName profileImage")
             .populate("shop", "firstName lastName email")
             .populate("items.service", "name price")
             .sort({ createdAt: -1 });
@@ -74,6 +75,40 @@ export const respondToOrder = async (req, res) => {
         await order.save();
 
         sendSuccess(res, 200, `Order ${action}ed successfully`, shopAction);
+    } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};
+
+// Get all orders with pagination (Filtered by Shop)
+export const getAllOrders = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Filter by the logged-in shop owner's ID
+        const filter = { shop: req.user.id };
+
+        const totalOrders = await Order.countDocuments(filter);
+        const orders = await Order.find(filter)
+            .populate("customer", "firstName lastName profileImage")
+            .populate("items.service", "name price")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const totalPages = Math.ceil(totalOrders / limit);
+
+        sendSuccess(res, 200, "Orders fetched successfully", {
+            orders,
+            pagination: {
+                totalOrders,
+                totalPages,
+                currentPage: page,
+                limit
+            },
+        });
     } catch (error) {
         sendError(res, 500, error.message);
     }

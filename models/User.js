@@ -54,6 +54,9 @@ const userSchema = new mongoose.Schema(
     country: {
       type: String,
     },
+    state:{
+      type: String,
+    },
     recentSearches: {
       type: [String],
       default: []

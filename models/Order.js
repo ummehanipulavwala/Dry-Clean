@@ -63,6 +63,8 @@ const orderSchema = new mongoose.Schema(
                 "Pickup Done",
                 "Delivered",
                 "Cancelled",
+                "Active",
+                "Urgent"
             ],
             default: "Pending",
         },
