@@ -10,34 +10,29 @@ export const searchServices = async (req, res) => {
     const searchText = req.query.q?.trim();
     const userId = req.user.id;
 
-    if (!searchText) {
-      return sendError(res, 400, "Search text is required");
-    }
 
     // Search logic
     const [services, shops] = await Promise.all([
-      Service.find({
-        name: { $regex: searchText, $options: "i" }
-      }),
-      ShopDetails.find({
-        shopName: { $regex: searchText, $options: "i" }
-      })
+      searchText ? Service.find({ name: { $regex: searchText, $options: "i" } }) : [],
+      searchText ? ShopDetails.find({ shopName: { $regex: searchText, $options: "i" } }) : ShopDetails.find({})
     ]);
 
-    // Update recent searches
-    await User.findByIdAndUpdate(userId, {
-      $pull: { recentSearches: searchText }
-    });
+    // Update recent searches only if query provided
+    if (searchText) {
+      await User.findByIdAndUpdate(userId, {
+        $pull: { recentSearches: searchText }
+      });
 
-    await User.findByIdAndUpdate(userId, {
-      $push: {
-        recentSearches: {
-          $each: [searchText],
-          $position: 0,
-          $slice: 5 // keep last 5 searches
+      await User.findByIdAndUpdate(userId, {
+        $push: {
+          recentSearches: {
+            $each: [searchText],
+            $position: 0,
+            $slice: 5 // keep last 5 searches
+          }
         }
-      }
-    });
+      });
+    }
 
     sendSuccess(res, 200, "Search results", { services, shops, count: services.length + shops.length });
 
