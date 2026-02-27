@@ -143,6 +143,33 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
+// clear all chats between sender and reciever (by chatId)
+export const clearChat = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    // Check if user is part of the chat
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return sendError(res, 404, "Chat not found");
+    }
+
+    if (!chat.members.includes(req.user.id)) {
+      return sendError(res, 403, "You are not a member of this chat");
+    }
+
+    // Delete all messages in the chat
+    await Message.deleteMany({ chatId });
+
+    // Update lastMessage in chat
+    await Chat.findByIdAndUpdate(chatId, { lastMessage: "" });
+
+    sendSuccess(res, 200, "Chat cleared", { chatId });
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
+};
+
 // mark messages as read
 export const markMessagesAsRead = async (req, res) => {
   try {
@@ -164,6 +191,35 @@ export const markMessagesAsRead = async (req, res) => {
       chatId,
       modifiedCount: result.modifiedCount
     });
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
+};
+
+// get chat history between current user and partner
+export const getChatHistory = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+
+    if (!partnerId) {
+      return sendError(res, 400, "Partner ID is required");
+    }
+
+    // Find if a chat exists between these two members
+    const chat = await Chat.findOne({
+      members: { $all: [req.user.id, partnerId] },
+    });
+
+    if (!chat) {
+      return sendSuccess(res, 200, "No chat history found", []);
+    }
+
+    // Fetch messages for this chat
+    const messages = await Message.find({ chatId: chat._id })
+      .populate("sender", "firstName lastName role")
+      .sort({ createdAt: 1 });
+
+    sendSuccess(res, 200, "Chat history fetched", messages);
   } catch (error) {
     sendError(res, 500, error.message);
   }
