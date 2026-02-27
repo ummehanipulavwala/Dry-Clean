@@ -174,6 +174,16 @@ export const getProfile = async (req, res) => {
   }
 };
 
+// GET ALL USERS
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    sendSuccess(res, 200, "All users fetched successfully", users);
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
+};
+
 // FORGOT PASSWORD
 export const forgotPassword = async (req, res) => {
   try {

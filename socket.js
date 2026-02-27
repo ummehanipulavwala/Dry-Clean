@@ -34,6 +34,44 @@ const socketIO = (server) => {
             });
         });
 
+        socket.on("edit message", (editedMessageRecieved) => {
+            var chat = editedMessageRecieved.chat;
+
+            if (!chat || !chat.members) return console.log("chat.members not defined for edit message");
+
+            chat.members.forEach((user) => {
+                if (user._id == editedMessageRecieved.sender._id) return;
+
+                socket.in(user._id).emit("message edited", editedMessageRecieved);
+            });
+        });
+
+        socket.on("delete message", (deletedMessageRecieved) => {
+            var chat = deletedMessageRecieved.chat;
+
+            if (!chat || !chat.members) return console.log("chat.members not defined for delete message");
+
+            chat.members.forEach((user) => {
+                if (deletedMessageRecieved.sender && user._id == deletedMessageRecieved.sender._id) return;
+
+                socket.in(user._id).emit("message deleted", deletedMessageRecieved);
+            });
+        });
+
+        socket.on("messages read", (readData) => {
+            // readData should contain { chatId, readerId, members: [...] }
+            if (!readData || !readData.members) return console.log("members not defined for messages read event");
+
+            readData.members.forEach((memberId) => {
+                if (memberId == readData.readerId) return;
+
+                socket.in(memberId).emit("messages seen", {
+                    chatId: readData.chatId,
+                    readerId: readData.readerId
+                });
+            });
+        });
+
         socket.off("setup", () => {
             console.log("USER DISCONNECTED");
             socket.leave(userData._id);

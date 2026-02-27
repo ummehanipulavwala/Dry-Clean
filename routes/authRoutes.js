@@ -1,5 +1,5 @@
 import express from "express";
-import { signup, signin, getProfile, forgotPassword, createNewPassword, saveuserdetails } from "../controllers/authController.js";
+import { signup, signin, getProfile, forgotPassword, createNewPassword, saveuserdetails, getAllUsers } from "../controllers/authController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
@@ -33,6 +33,9 @@ router.get(
     res.json({ message: "Welcome Admin" });
   }
 );
+
+// Get all users (Admin only)
+router.get("/allusers", authMiddleware, authorizeRoles("Admin"), getAllUsers);
 
 // shop access only
 

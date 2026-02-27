@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    name:{
+    name: {
       type: String,
       trim: true,
     },
@@ -52,13 +52,13 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     pincode: {
-      type: Number,
+      type: String,
       match: [/^[1-9][0-9]{5}$/, "6 digit valid Indian pincode"]
     },
     country: {
       type: String,
     },
-    state:{
+    state: {
       type: String,
     },
     recentSearches: {

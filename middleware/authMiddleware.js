@@ -15,6 +15,7 @@ export const authMiddleware = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+    console.log("Verifying token with secret exists:", !!process.env.JWT_SECRET);
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
@@ -22,7 +23,8 @@ export const authMiddleware = (req, res, next) => {
 
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    console.error("JWT Verification Error:", error.message);
+    return res.status(401).json({ message: "Invalid or expired token", error: error.message });
   }
 };
 
