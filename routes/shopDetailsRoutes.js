@@ -6,6 +6,7 @@ import {
     getAllShops,
     getShopById,
     getRecentlyViewedShops,
+    getAdminShops,
 } from "../controllers/shopDetailsController.js";
 import { authMiddleware, authorizeRoles } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
@@ -14,6 +15,9 @@ const router = express.Router();
 
 // Get Recently Viewed Shops (Authenticated)
 router.get("/recent", authMiddleware, getRecentlyViewedShops);
+
+// Get All Shops for Admin
+router.get("/admin", authMiddleware, getAdminShops);
 
 // Create Shop Details (Shop only)
 router.post(

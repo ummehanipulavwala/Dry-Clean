@@ -1,5 +1,6 @@
 import Chat from "../models/Chat.js";
 import Message from "../models/Message.js";
+import ShopDetails from "../models/Shopdetails.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 //send message
@@ -225,3 +226,60 @@ export const getChatHistory = async (req, res) => {
   }
 };
 
+// get chats for user with shop details and unread count
+export const getChatsForUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find all chats the user is a member of
+    const chats = await Chat.find({
+      members: { $in: [userId] },
+    }).sort({ updatedAt: -1 });
+
+    const enrichedChats = await Promise.all(
+      chats.map(async (chat) => {
+        // Find the other member (partner)
+        const partnerId = chat.members.find(
+          (id) => id.toString() !== userId.toString()
+        );
+
+        if (!partnerId) return null;
+
+        // Fetch shop details for the partner
+        const shop = await ShopDetails.findOne({ userId: partnerId });
+
+        // Filtering based on the requirement "to all the shops"
+        if (!shop) return null;
+
+        // Fetch the recent message
+        const recentMessageDoc = await Message.findOne({ chatId: chat._id }).sort({
+          createdAt: -1,
+        });
+
+        // Count unread messages (sent by the other user)
+        const unreadCount = await Message.countDocuments({
+          chatId: chat._id,
+          sender: partnerId,
+          isRead: false,
+        });
+
+        return {
+          chatId: chat._id,
+          shopname: shop.shopName,
+          shopimage: shop.shopImage,
+          recentMessage: recentMessageDoc ? recentMessageDoc.text : "",
+          time: recentMessageDoc ? recentMessageDoc.time : "",
+          date: recentMessageDoc ? recentMessageDoc.date : "",
+          unreadCount: unreadCount,
+        };
+      })
+    );
+
+    // Filter out nulls (chats where partner has no shop details)
+    const filteredChats = enrichedChats.filter((chat) => chat !== null);
+
+    sendSuccess(res, 200, "Chats fetched successfully", filteredChats);
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
+};

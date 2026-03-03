@@ -1,5 +1,7 @@
 import ShopDetails from "../models/Shopdetails.js";
 import User from "../models/User.js";
+import Order from "../models/Order.js";
+import Service from "../models/servicemodel.js";
 import jwt from "jsonwebtoken";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
@@ -152,3 +154,45 @@ export const getRecentlyViewedShops = async (req, res) => {
     }
 };
 
+// Get All Shops for Admin Dashboard
+export const getAdminShops = async (req, res) => {
+    try {
+        const shops = await ShopDetails.find().populate("userId", "firstName lastName name email phone status");
+
+        const enrichedShops = await Promise.all(
+            shops.map(async (shop) => {
+                const user = shop.userId;
+                if (!user) return null;
+
+                // Fetch total orders for this shop
+                const totalOrders = await Order.countDocuments({ shop: user._id });
+
+                // Fetch available services for this shop
+                const services = await Service.find({ shop: user._id }).select("name");
+                const availableServices = services.map(s => s.name).join(", ");
+
+                return {
+                    id: shop._id,
+                    shopName: shop.shopName,
+                    ownerName: user.name || `${user.firstName} ${user.lastName}`,
+                    phone: user.phone,
+                    email: user.email,
+                    shopAddress: shop.shopAddress,
+                    pincode: shop.pincode || "N/A",
+                    location: shop.location || "N/A",
+                    status: user.status || "Active",
+                    availableServices: availableServices || "None",
+                    commissionPercentage: shop.commissionPercentage || 0,
+                    totalOrders: totalOrders,
+                };
+            })
+        );
+
+        // Filter out nulls in case of dangling shop details
+        const filteredShops = enrichedShops.filter(s => s !== null);
+
+        sendSuccess(res, 200, "Admin shops fetched successfully", filteredShops);
+    } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};

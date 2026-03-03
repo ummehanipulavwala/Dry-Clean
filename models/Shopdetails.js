@@ -27,6 +27,18 @@ const shopDetailsSchema = new mongoose.Schema(
             type: String, // URL/Path to image
             default: "",
         },
+        pincode: {
+            type: String,
+            trim: true,
+        },
+        location: {
+            type: String,
+            trim: true,
+        },
+        commissionPercentage: {
+            type: Number,
+            default: 0,
+        },
     },
     {
         timestamps: true,
