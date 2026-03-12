@@ -51,12 +51,23 @@ export const sendMessage = async (req, res) => {
 export const getMessages = async (req, res) => {
   try {
     const { chatId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await Message.countDocuments({ chatId });
+    const totalPages = Math.ceil(total / limit);
 
     const messages = await Message.find({ chatId })
       .populate("sender", "firstName lastName role")
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit);
 
-    sendSuccess(res, 200, "Messages fetched", messages);
+    sendSuccess(res, 200, "Messages fetched", {
+      messages,
+      pagination: { total, page, limit, totalPages },
+    });
   } catch (error) {
     sendError(res, 500, error.message);
   }
@@ -65,13 +76,24 @@ export const getMessages = async (req, res) => {
 // get all chats(recent chats)
 export const getMyChats = async (req, res) => {
   try {
-    const chats = await Chat.find({
-      members: { $in: [req.user.id] },
-    })
-      .populate("members", "firstName lastName role")
-      .sort({ updatedAt: -1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    sendSuccess(res, 200, "Chats fetched", chats);
+    const query = { members: { $in: [req.user.id] } };
+    const total = await Chat.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    const chats = await Chat.find(query)
+      .populate("members", "firstName lastName role")
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    sendSuccess(res, 200, "Chats fetched", {
+      chats,
+      pagination: { total, page, limit, totalPages },
+    });
   } catch (error) {
     sendError(res, 500, error.message);
   }
@@ -231,11 +253,19 @@ export const getChatHistory = async (req, res) => {
 export const getChatsForUser = async (req, res) => {
   try {
     const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    // Find all chats the user is a member of
-    const chats = await Chat.find({
-      members: { $in: [userId] },
-    }).sort({ updatedAt: -1 });
+    const query = { members: { $in: [userId] } };
+    const total = await Chat.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    // Find paginated chats the user is a member of
+    const chats = await Chat.find(query)
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     const enrichedChats = await Promise.all(
       chats.map(async (chat) => {
@@ -294,7 +324,10 @@ export const getChatsForUser = async (req, res) => {
     // Filter out nulls (in case partnerId wasn't found)
     const filteredChats = enrichedChats.filter((chat) => chat !== null);
 
-    sendSuccess(res, 200, "Chats fetched successfully", filteredChats);
+    sendSuccess(res, 200, "Chats fetched successfully", {
+      chats: filteredChats,
+      pagination: { total, page, limit, totalPages },
+    });
   } catch (error) {
     sendError(res, 500, error.message);
   }
