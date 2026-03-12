@@ -1,6 +1,7 @@
 import Chat from "../models/Chat.js";
 import Message from "../models/Message.js";
 import ShopDetails from "../models/Shopdetails.js";
+import User from "../models/User.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 //send message
@@ -245,16 +246,14 @@ export const getChatsForUser = async (req, res) => {
 
         if (!partnerId) return null;
 
-        // Fetch shop details for the partner
+        // Fetch user details for the partner
+        const partnerUser = await User.findById(partnerId);
+
+        // Fetch shop details for the partner if they have any
         const shop = await ShopDetails.findOne({ userId: partnerId });
 
-        // Filtering based on the requirement "to all the shops"
-        if (!shop) return null;
-
-        // Fetch the recent message
-        const recentMessageDoc = await Message.findOne({ chatId: chat._id }).sort({
-          createdAt: -1,
-        });
+        // Fetch only the most recent message for the chat list summary
+        const recentMessageDoc = await Message.findOne({ chatId: chat._id }).sort({ createdAt: -1 });
 
         // Count unread messages (sent by the other user)
         const unreadCount = await Message.countDocuments({
@@ -263,10 +262,27 @@ export const getChatsForUser = async (req, res) => {
           isRead: false,
         });
 
+        // Determine display name and image
+        let displayName = "Unknown User";
+        let displayImage = "";
+        let role = "User";
+
+        if (shop && shop.shopName) {
+          displayName = shop.shopName;
+          displayImage = shop.shopImage || "";
+          role = "Shop";
+        } else if (partnerUser) {
+          displayName = partnerUser.firstName ? `${partnerUser.firstName} ${partnerUser.lastName}`.trim() : partnerUser.name || "User";
+          displayImage = partnerUser.profileImage || "";
+          role = partnerUser.role || "User";
+        }
+
         return {
           chatId: chat._id,
-          shopname: shop.shopName,
-          shopimage: shop.shopImage,
+          partnerId: partnerId,
+          role: role,
+          shopname: displayName,
+          shopimage: displayImage,
           recentMessage: recentMessageDoc ? recentMessageDoc.text : "",
           time: recentMessageDoc ? recentMessageDoc.time : "",
           date: recentMessageDoc ? recentMessageDoc.date : "",
@@ -275,7 +291,7 @@ export const getChatsForUser = async (req, res) => {
       })
     );
 
-    // Filter out nulls (chats where partner has no shop details)
+    // Filter out nulls (in case partnerId wasn't found)
     const filteredChats = enrichedChats.filter((chat) => chat !== null);
 
     sendSuccess(res, 200, "Chats fetched successfully", filteredChats);
