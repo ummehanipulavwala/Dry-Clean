@@ -14,6 +14,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
 import socketIO from "./socket.js";
 
 dotenv.config();
@@ -42,6 +43,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 app.get("/", (req, res) => {
   res.send("welcome to dry clean...");

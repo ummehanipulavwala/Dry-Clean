@@ -48,7 +48,40 @@ const shopDetailsSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Service",
         }],
+        status: {
+            type: String,
+            enum: ["available", "unavailable"],
+            default: "available",
+        },
+        reviews: [
+            {
+                userId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User",
+                    required: true,
+                },
+                shopId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Shop",
+                    required: true,
+                },
+                description: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+                updatedAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
     },
+
     {
         timestamps: true,
         versionKey: false,

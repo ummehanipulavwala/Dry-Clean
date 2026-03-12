@@ -10,7 +10,7 @@ import { sendSuccess, sendError } from "../utils/responseHandler.js";
 // Create Shop Details
 export const createShopDetails = async (req, res) => {
     try {
-        const { shopName, shopAddress, shopRatings } = req.body;
+        const { shopName, shopAddress, shopRatings, status } = req.body;
         const userId = req.user.id;
 
         // Check if shop details already exist for this user
@@ -21,12 +21,16 @@ export const createShopDetails = async (req, res) => {
 
         const shopImage = req.file ? `/uploads/profiles/${req.file.filename}` : "";
 
+        const user = await User.findById(userId);
+
         const shopDetails = await ShopDetails.create({
             userId,
             shopName,
             shopAddress,
+            phone: user?.phone || "0000000000", // Fallback if user somehow lacks a phone
             shopRatings: shopRatings || 0,
             shopImage,
+            status: status || "available",
         });
 
         sendSuccess(res, 201, "Shop details created successfully", shopDetails);
@@ -53,13 +57,16 @@ export const getMyShopDetails = async (req, res) => {
 // Update Shop Details
 export const updateShopDetails = async (req, res) => {
     try {
-        const { shopName, shopAddress, shopRatings } = req.body;
+        const { shopName, shopAddress, shopRatings, status } = req.body;
         const userId = req.user.id;
+        const user = await User.findById(userId);
 
         let updateData = {
             ...(shopName && { shopName }),
             ...(shopAddress && { shopAddress }),
             ...(shopRatings && { shopRatings }),
+            ...(status && { status }),
+            ...(user?.phone && { phone: user.phone }),
         };
 
         if (req.file) {
