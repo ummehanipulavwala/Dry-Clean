@@ -17,6 +17,11 @@ const shopDetailsSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        phone: {
+            type: String,
+            required: true,
+            trim: true,
+        },
         shopRatings: {
             type: Number,
             default: 0,
@@ -39,6 +44,10 @@ const shopDetailsSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        services: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Service",
+        }],
     },
     {
         timestamps: true,

@@ -4,7 +4,11 @@ import path from "path";
 // Storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/profiles");
+    let dest = "uploads/profiles";
+    if (req.originalUrl.includes("/services")) {
+      dest = "uploads/services";
+    }
+    cb(null, dest);
   },
   filename: (req, file, cb) => {
     const uniqueName =

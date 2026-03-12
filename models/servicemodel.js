@@ -8,30 +8,17 @@ const serviceSchema = new mongoose.Schema(
       unique: true, // No duplicate services
       trim: true,
     },
-    shop: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
     description: String,
-    image: {
-      type: String, // image path or URL
-    },
-    price: {
-      type: Number,
-      required: true,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
     category: {
       type: String,
       required: true,
     },
-    city: {
-      type: String,
-      required: true,
+    image: {
+      type: String, // image path or URL
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {

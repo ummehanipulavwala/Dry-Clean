@@ -4,13 +4,10 @@ import { sendSuccess, sendError } from "../utils/responseHandler.js";
 //create service for admin
 export const createService = async (req, res) => {
   try {
-    if (req.user.role !== "Shop") {
-      return sendError(res, 403, "Only shops can add services");
-    }
-    const { name, description, price, category, city } = req.body;
+    const { name, description, category } = req.body;
 
-    if (!name || !price || !category || !city) {
-      return sendError(res, 400, "Service name, price, category and city are required");
+    if (!name || !category) {
+      return sendError(res, 400, "Service name and category are required");
     }
 
     const existingService = await Service.findOne({ name });
@@ -20,12 +17,9 @@ export const createService = async (req, res) => {
     }
 
     const service = await Service.create({
-      shop: req.user.id,
       name,
-      price,
       description,
       category,
-      city,
       image: req.file ? `/uploads/services/${req.file.filename}` : null,
     });
 
@@ -38,7 +32,7 @@ export const createService = async (req, res) => {
 // get all services (public)
 export const getAllServices = async (req, res) => {
   try {
-    const services = await Service.find({ isActive: true }).populate("shop", "firstName lastName city");
+    const services = await Service.find({ isActive: true });
 
     sendSuccess(res, 200, "Services fetched successfully", { count: services.length, services });
   } catch (error) {
@@ -46,11 +40,33 @@ export const getAllServices = async (req, res) => {
   }
 };
 
+// get all services for admin (includes inactive ones)
+export const getAllAdminServices = async (req, res) => {
+  try {
+    const services = await Service.find().sort({ createdAt: -1 });
+
+    const formattedServices = services.map((service) => ({
+      serviceId: service._id,
+      serviceName: service.name,
+      description: service.description,
+      serviceImage: service.image || null,
+      category: service.category,
+      status: service.isActive ? "Active" : "Inactive",
+      createdAt: service.createdAt,
+      updatedAt: service.updatedAt
+    }));
+
+    sendSuccess(res, 200, "All admin services fetched successfully", { count: formattedServices.length, services: formattedServices });
+  } catch (error) {
+    sendError(res, 500, "Error fetching all admin services", error.message);
+  }
+};
+
 // Get Single Service by ID
 export const getServiceById = async (req, res) => {
   try {
     const { id } = req.params;
-    const service = await Service.findById(id).populate("shop", "firstName lastName city");
+    const service = await Service.findById(id);
 
     if (!service) {
       return sendError(res, 404, "Service not found");
@@ -67,9 +83,14 @@ export const updateService = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const updateData = { ...req.body };
+    if (req.file) {
+      updateData.image = `/uploads/services/${req.file.filename}`;
+    }
+
     const service = await Service.findByIdAndUpdate(
       id,
-      req.body,
+      updateData,
       { new: true }
     );
 
@@ -88,11 +109,7 @@ export const deleteService = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const service = await Service.findByIdAndUpdate(
-      id,
-      { isActive: false },
-      { new: true }
-    );
+    const service = await Service.findByIdAndDelete(id);
 
     if (!service) {
       return sendError(res, 404, "Service not found");

@@ -4,26 +4,33 @@ export const authMiddleware = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // Check header exists
     if (!authHeader) {
+      console.warn("Auth failed: Authorization header missing");
       return res.status(401).json({ message: "Authorization header missing" });
     }
 
-    // Must start with Bearer
     if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Invalid token format" });
+      console.warn("Auth failed: Invalid header format", authHeader.substring(0, 15));
+      return res.status(401).json({ message: "Invalid token format (must be Bearer)" });
     }
 
     const token = authHeader.split(" ")[1];
-    console.log("Verifying token with secret exists:", !!process.env.JWT_SECRET);
+
+    if (!token || token === "null" || token === "undefined") {
+      console.warn(`Auth failed: Token is missing or invalid string: "${token}"`);
+      return res.status(401).json({ message: "Invalid or missing token string" });
+    }
+
+    console.log(`Verifying token: length=${token.length}, prefix=${token.substring(0, 10)}...`);
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
-    console.log("Authenticated user:", req.user);
-
     next();
   } catch (error) {
     console.error("JWT Verification Error:", error.message);
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid token structure", error: error.message });
+    }
     return res.status(401).json({ message: "Invalid or expired token", error: error.message });
   }
 };

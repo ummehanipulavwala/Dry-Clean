@@ -13,6 +13,7 @@ import advertisementRoutes from "./routes/advertisementRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 import socketIO from "./socket.js";
 
 dotenv.config();
@@ -40,6 +41,7 @@ app.use("/api/ads", advertisementRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.get("/", (req, res) => {
   res.send("welcome to dry clean...");

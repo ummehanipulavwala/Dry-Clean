@@ -1,6 +1,6 @@
 import express from "express";
-import { createOrder, getMyOrders, respondToOrder, getAllOrders, getShopActiveOrders, getAllRequests } from "../controllers/orderController.js";
-import { authMiddleware } from "../middleware/authMiddleware.js";
+import { createOrder, getMyOrders, respondToOrder, getAllOrders, getShopActiveOrders, getAllRequests, updateOrder, deleteOrder } from "../controllers/orderController.js";
+import { authMiddleware, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -10,5 +10,9 @@ router.get("/all", authMiddleware, getAllOrders);
 router.get("/shop/active", authMiddleware, getShopActiveOrders);
 router.put("/action", authMiddleware, respondToOrder);
 router.get("/requests", authMiddleware, getAllRequests);
+
+// Admin operations
+router.put("/:id", authMiddleware, authorizeRoles("Admin"), updateOrder);
+router.delete("/:id", authMiddleware, authorizeRoles("Admin"), deleteOrder);
 
 export default router;

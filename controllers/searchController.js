@@ -1,40 +1,64 @@
+import mongoose from "mongoose";
+import Order from "../models/Order.js";
+import Feedback from "../models/Feedback.js";
 import Service from "../models/servicemodel.js";
-import User from "../models/User.js";
 import ShopDetails from "../models/Shopdetails.js";
+import User from "../models/User.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
-// Search Services Controller
-// GET /api/search/services?q=searchText
+// Global Search Controller
+// GET /api/search?q=searchText
 export const searchServices = async (req, res) => {
   try {
     const searchText = req.query.q?.trim();
-    const userId = req.user.id;
-
-
-    // Search logic
-    const [services, shops] = await Promise.all([
-      searchText ? Service.find({ name: { $regex: searchText, $options: "i" } }) : [],
-      searchText ? ShopDetails.find({ shopName: { $regex: searchText, $options: "i" } }) : ShopDetails.find({})
-    ]);
-
-    // Update recent searches only if query provided
-    if (searchText) {
-      await User.findByIdAndUpdate(userId, {
-        $pull: { recentSearches: searchText }
-      });
-
-      await User.findByIdAndUpdate(userId, {
-        $push: {
-          recentSearches: {
-            $each: [searchText],
-            $position: 0,
-            $slice: 5 // keep last 5 searches
-          }
-        }
+    if (!searchText) {
+      return sendSuccess(res, 200, "Empty search", {
+        services: [], shops: [], orders: [], users: [], feedback: [], count: 0
       });
     }
 
-    sendSuccess(res, 200, "Search results", { services, shops, count: services.length + shops.length });
+    const userId = req.user.id;
+    const regex = { $regex: searchText, $options: "i" };
+
+    // Search logic across all entities
+    const [services, shops, orders, users, feedback] = await Promise.all([
+      Service.find({ serviceName: regex }).limit(5),
+      ShopDetails.find({ shopName: regex }).limit(5),
+      Order.find({
+        $or: [
+          { _id: mongoose.isValidObjectId(searchText) ? searchText : undefined },
+          { orderStatus: regex }
+        ].filter(Boolean)
+      }).populate("customer", "name firstName lastName").limit(5),
+      User.find({
+        $or: [
+          { firstName: regex },
+          { lastName: regex },
+          { name: regex },
+          { email: regex }
+        ]
+      }).limit(5),
+      Feedback.find({ comment: regex }).populate("userId", "name firstName lastName").limit(5)
+    ]);
+
+    // Update recent searches
+    await User.findByIdAndUpdate(userId, {
+      $pull: { recentSearches: searchText }
+    });
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        recentSearches: { $each: [searchText], $position: 0, $slice: 5 }
+      }
+    });
+
+    sendSuccess(res, 200, "Search results", {
+      services,
+      shops,
+      orders,
+      users,
+      feedback,
+      count: services.length + shops.length + orders.length + users.length + feedback.length
+    });
 
   } catch (error) {
     sendError(res, 500, error.message);

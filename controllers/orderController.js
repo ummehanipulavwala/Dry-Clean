@@ -33,7 +33,7 @@ export const getMyOrders = async (req, res) => {
         const orders = await Order.find({ customer: req.user.id })
             .populate("customer", "firstName lastName profileImage")
             .populate("shop", "firstName lastName email")
-            .populate("items.service", "name price")
+            .populate("items.service", "name")
             .sort({ createdAt: -1 });
 
         sendSuccess(res, 200, "Orders fetched successfully", orders);
@@ -93,7 +93,7 @@ export const getAllOrders = async (req, res) => {
         const totalOrders = await Order.countDocuments(filter);
         const orders = await Order.find(filter)
             .populate("customer", "firstName lastName profileImage")
-            .populate("items.service", "name price")
+            .populate("items.service", "name")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -162,7 +162,7 @@ export const getAllRequests = async (req, res) => {
         const totalOrders = await Order.countDocuments(filter);
         const orders = await Order.find(filter)
             .populate("customer", "firstName lastName profileImage")
-            .populate("items.service", "name price")
+            .populate("items.service", "name")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -194,6 +194,40 @@ export const getAllRequests = async (req, res) => {
                 limit,
             },
         });
+    } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};
+
+// Update order (Admin)
+export const updateOrder = async (req, res) => {
+    try {
+        const order = await Order.findByIdAndUpdate(
+            req.params.id,
+            { $set: req.body },
+            { new: true, runValidators: true }
+        );
+
+        if (!order) {
+            return sendError(res, 404, "Order not found");
+        }
+
+        sendSuccess(res, 200, "Order updated successfully", order);
+    } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};
+
+// Delete order (Admin)
+export const deleteOrder = async (req, res) => {
+    try {
+        const order = await Order.findByIdAndDelete(req.params.id);
+
+        if (!order) {
+            return sendError(res, 404, "Order not found");
+        }
+
+        sendSuccess(res, 200, "Order deleted successfully");
     } catch (error) {
         sendError(res, 500, error.message);
     }

@@ -1,20 +1,29 @@
 import express from "express";
-import { createService, getAllServices, updateService, deleteService, getServiceById } from "../controllers/serviceController.js";
+import { createService, getAllServices, updateService, deleteService, getServiceById, getAllAdminServices } from "../controllers/serviceController.js";
 import { authMiddleware, authorizeRoles } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
-// Admin / Shop can create service
+// Admin / Shop can create service with image upload
 router.post(
   "/",
   authMiddleware,
   authorizeRoles("Admin", "Shop"),
+  upload.single("image"), // field name from frontend
   createService
 );
 
-// Public – Get all services
-router.get("/", getAllServices);
+// Admin - Get all services (includes inactive)
+router.get(
+  "/admin/all",
+  authMiddleware,
+  authorizeRoles("Admin"),
+  getAllAdminServices
+);
+
+// Admins – Get all services (Restricted from Public)
+router.get("/", authMiddleware, authorizeRoles("Admin"), getAllServices);
 
 // Public - Get Single Service by ID (Place this after specific paths)
 router.get("/:id", getServiceById);
@@ -24,6 +33,7 @@ router.put(
   "/:id",
   authMiddleware,
   authorizeRoles("Admin", "Shop"),
+  upload.single("image"),
   updateService
 );
 
@@ -33,20 +43,6 @@ router.delete(
   authMiddleware,
   authorizeRoles("Admin"),
   deleteService
-);
-
-// Create service with image upload
-router.post(
-  "/",
-  authMiddleware,
-  upload.single("image"), // field name from frontend
-  createService,
-  (req, res) => {
-    res.status(200).json({
-      message: "Image uploaded successfully",
-      imageUrl: `/uploads/${req.file.filename}`,
-    });
-  }
 );
 
 export default router;

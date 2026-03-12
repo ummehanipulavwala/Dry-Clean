@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import Order from "../models/Order.js";
 import Service from "../models/servicemodel.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 
@@ -94,7 +95,9 @@ export const getAllShops = async (req, res) => {
 // Get Shop by ID (Public)
 export const getShopById = async (req, res) => {
     try {
-        const shop = await ShopDetails.findById(req.params.id).populate("userId", "firstName lastName email city");
+        const shop = await ShopDetails.findById(req.params.id)
+            .populate("userId", "firstName lastName email city")
+            .populate("services");
         if (!shop) {
             return sendError(res, 404, "Shop not found");
         }
@@ -157,7 +160,9 @@ export const getRecentlyViewedShops = async (req, res) => {
 // Get All Shops for Admin Dashboard
 export const getAdminShops = async (req, res) => {
     try {
-        const shops = await ShopDetails.find().populate("userId", "firstName lastName name email phone status");
+        const shops = await ShopDetails.find()
+            .populate("userId", "firstName lastName name email phone status")
+            .populate("services");
 
         const enrichedShops = await Promise.all(
             shops.map(async (shop) => {
@@ -166,10 +171,6 @@ export const getAdminShops = async (req, res) => {
 
                 // Fetch total orders for this shop
                 const totalOrders = await Order.countDocuments({ shop: user._id });
-
-                // Fetch available services for this shop
-                const services = await Service.find({ shop: user._id }).select("name");
-                const availableServices = services.map(s => s.name).join(", ");
 
                 return {
                     id: shop._id,
@@ -181,9 +182,9 @@ export const getAdminShops = async (req, res) => {
                     pincode: shop.pincode || "N/A",
                     location: shop.location || "N/A",
                     status: user.status || "Active",
-                    availableServices: availableServices || "None",
                     commissionPercentage: shop.commissionPercentage || 0,
                     totalOrders: totalOrders,
+                    services: shop.services || []
                 };
             })
         );
@@ -192,6 +193,143 @@ export const getAdminShops = async (req, res) => {
         const filteredShops = enrichedShops.filter(s => s !== null);
 
         sendSuccess(res, 200, "Admin shops fetched successfully", filteredShops);
+    } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};
+
+// Admin Create Shop (User + ShopDetails)
+export const adminCreateShop = async (req, res) => {
+    try {
+        const {
+            email,
+            password,
+            ownerName,
+            phone,
+            shopName,
+            shopAddress,
+            pincode,
+            location,
+            commissionPercentage,
+            services
+        } = req.body;
+
+        if (!email || !password || !shopName || !ownerName || !phone) {
+            return sendError(res, 400, "Required fields: email, password, shopName, ownerName, phone");
+        }
+
+        // 1. Check if user already exists
+        const userExists = await User.findOne({ email });
+        if (userExists) {
+            return sendError(res, 400, "Email already registered");
+        }
+
+        // 2. Create User with role "Shop"
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await User.create({
+            email,
+            password: hashedPassword,
+            name: ownerName,
+            phone,
+            role: "Shop",
+            status: "Active"
+        });
+
+        // 3. Create Shop Details linked to this user
+        const shopDetails = await ShopDetails.create({
+            userId: newUser._id,
+            shopName,
+            phone,
+            shopAddress: shopAddress || "",
+            pincode: pincode || "",
+            location: location || "",
+            commissionPercentage: commissionPercentage || 0,
+            shopRatings: 0,
+            shopImage: "",
+            services: services || []
+        });
+
+        sendSuccess(res, 201, "Shop and User created successfully", {
+            userId: newUser._id,
+            shopId: shopDetails._id
+        });
+    } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};
+
+// Admin Update Shop (Updates both User and ShopDetails)
+export const adminUpdateShop = async (req, res) => {
+    try {
+        const { id } = req.params; // ShopDetails ID
+        const {
+            shopName,
+            ownerName,
+            phone,
+            email,
+            shopAddress,
+            pincode,
+            location,
+            status,
+            commissionPercentage,
+            services
+        } = req.body;
+
+        const shop = await ShopDetails.findById(id);
+        if (!shop) {
+            return sendError(res, 404, "Shop details not found");
+        }
+
+        // 1. Update ShopDetails
+        const updatedShop = await ShopDetails.findByIdAndUpdate(
+            id,
+            {
+                $set: {
+                    ...(shopName && { shopName }),
+                    ...(phone && { phone }),
+                    ...(shopAddress && { shopAddress }),
+                    ...(pincode && { pincode }),
+                    ...(location && { location }),
+                    ...(commissionPercentage !== undefined && { commissionPercentage }),
+                    ...(services && { services }),
+                }
+            },
+            { new: true }
+        );
+
+        // 2. Update associated User
+        await User.findByIdAndUpdate(shop.userId, {
+            $set: {
+                ...(ownerName && { name: ownerName }),
+                ...(phone && { phone }),
+                ...(email && { email }),
+                ...(status && { status }),
+            }
+        });
+
+        sendSuccess(res, 200, "Shop updated successfully", updatedShop);
+    } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};
+
+// Admin Delete Shop (Deletes both User and ShopDetails)
+export const adminDeleteShop = async (req, res) => {
+    try {
+        const { id } = req.params; // ShopDetails ID
+        const shop = await ShopDetails.findById(id);
+
+        if (!shop) {
+            return sendError(res, 404, "Shop not found");
+        }
+
+        // Delete ShopDetails
+        await ShopDetails.findByIdAndDelete(id);
+
+        // Delete associated User
+        await User.findByIdAndDelete(shop.userId);
+
+        sendSuccess(res, 200, "Shop and associated user deleted successfully");
     } catch (error) {
         sendError(res, 500, error.message);
     }
