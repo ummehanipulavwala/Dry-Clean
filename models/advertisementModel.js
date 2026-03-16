@@ -9,6 +9,21 @@ const advertisementSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    discount: {
+        type: String,
+    },
+    description: {
+        type: String,
+    },
+    time: {
+        type: String,
+    },
+    ratings: {
+        type: Number,
+    },
+    price: {
+        type: String,
+    },
     isActive: {
         type: Boolean,
         default: true,

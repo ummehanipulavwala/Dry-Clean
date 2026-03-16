@@ -4,6 +4,8 @@ import Feedback from "../models/Feedback.js";
 import Service from "../models/servicemodel.js";
 import ShopDetails from "../models/Shopdetails.js";
 import User from "../models/User.js";
+import Payment from "../models/Payment.js";
+import Advertisement from "../models/advertisementModel.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 // Global Search Controller
@@ -21,13 +23,26 @@ export const searchServices = async (req, res) => {
     const regex = { $regex: searchText, $options: "i" };
 
     // Search logic across all entities
-    const [services, shops, orders, users, feedback] = await Promise.all([
-      Service.find({ serviceName: regex }).limit(5),
+    const matchedUsers = await User.find({
+      $or: [
+        { firstName: regex },
+        { lastName: regex },
+        { name: regex },
+        { email: regex },
+        { phone: regex }
+      ]
+    }).select("_id");
+
+    const matchedUserIds = matchedUsers.map(u => u._id);
+
+    const [services, shops, orders, users, feedback, payments, ads] = await Promise.all([
+      Service.find({ name: regex }).limit(5),
       ShopDetails.find({ shopName: regex }).limit(5),
       Order.find({
         $or: [
           { _id: mongoose.isValidObjectId(searchText) ? searchText : undefined },
-          { orderStatus: regex }
+          { orderStatus: regex },
+          { customer: { $in: matchedUserIds } }
         ].filter(Boolean)
       }).populate("customer", "name firstName lastName").limit(5),
       User.find({
@@ -35,10 +50,19 @@ export const searchServices = async (req, res) => {
           { firstName: regex },
           { lastName: regex },
           { name: regex },
-          { email: regex }
+          { email: regex },
+          { phone: regex }
         ]
       }).limit(5),
-      Feedback.find({ comment: regex }).populate("userId", "name firstName lastName").limit(5)
+      Feedback.find({ comment: regex }).populate("userId", "name firstName lastName").limit(5),
+      Payment.find({
+        $or: [
+          { paymentStatus: regex },
+          { paymentMethod: regex },
+          { _id: mongoose.isValidObjectId(searchText) ? searchText : undefined }
+        ].filter(Boolean)
+      }).populate("userId", "name firstName lastName").limit(5),
+      Advertisement.find({ title: regex }).limit(5)
     ]);
 
     // Update recent searches
@@ -57,7 +81,9 @@ export const searchServices = async (req, res) => {
       orders,
       users,
       feedback,
-      count: services.length + shops.length + orders.length + users.length + feedback.length
+      payments,
+      ads,
+      count: services.length + shops.length + orders.length + users.length + feedback.length + payments.length + ads.length
     });
 
   } catch (error) {
