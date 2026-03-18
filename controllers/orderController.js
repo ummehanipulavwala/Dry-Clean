@@ -1,14 +1,28 @@
 import Order from "../models/Order.js";
+import User from "../models/User.js";
 import ShopOrderAction from "../models/ShopOrderAction.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
+import { sendSMS } from "../utils/twilioService.js";
 
 // Create a new order
 export const createOrder = async (req, res) => {
     try {
-        const { shop, items, pickupAddress, deliveryAddress, pickupSchedule, totalAmount } = req.body;
+        const { shop, items, pickupAddress, deliveryAddress, pickupSchedule, totalAmount, phone } = req.body;
 
         if (!shop || !items || items.length === 0 || !pickupAddress || !deliveryAddress || !pickupSchedule || !totalAmount) {
             return sendError(res, 400, "All required fields must be provided");
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) return sendError(res, 404, "User not found");
+
+        if (!user.phone && !phone) {
+            return sendError(res, 400, "Phone number is compulsory for creating an order");
+        }
+
+        if (phone) {
+            user.phone = phone;
+            await user.save();
         }
 
         const newOrder = await Order.create({
@@ -45,16 +59,25 @@ export const getMyOrders = async (req, res) => {
 // Shop action: Accept or Reject an order
 export const respondToOrder = async (req, res) => {
     try {
-        const { orderId, action, reason } = req.body;
+        const { orderId, action, reason, deliveryPersonName, deliveryPersonPhone } = req.body;
 
         if (!orderId || !action || !["Accept", "Reject"].includes(action)) {
             return sendError(res, 400, "Invalid action or orderId");
         }
 
-        const order = await Order.findById(orderId);
+        const order = await Order.findById(orderId).populate("customer").populate("items.service");
 
         if (!order) {
             return sendError(res, 404, "Order not found");
+        }
+
+        if (action === "Accept") {
+            if (!deliveryPersonName || !deliveryPersonPhone) {
+                return sendError(res, 400, "Delivery person name and phone are required to accept an order");
+            }
+            order.deliveryPersonName = deliveryPersonName;
+            order.deliveryPersonPhone = deliveryPersonPhone;
+            order.orderStatus = "Active"; // Or appropriate status
         }
 
         // Capture the action in ShopOrderAction
@@ -69,12 +92,28 @@ export const respondToOrder = async (req, res) => {
         if (action === "Reject") {
             order.orderStatus = "Cancelled";
         }
-        // Note: If Accepted, we keep it as Pending or move to next stage "Pickup Done" 
-        // depending on the desired flow. For now, we'll just log the action.
 
         await order.save();
 
-        sendSuccess(res, 200, `Order ${action}ed successfully`, shopAction);
+        // Send SMS if accepted
+        if (action === "Accept") {
+            const customerName = order.customer?.firstName || "Customer";
+            const customerPhone = order.customer?.phone;
+
+            const itemDetails = order.items.map(i => `${i.itemName} x${i.quantity}`).join(", ");
+            const body = `Hi ${customerName}, your order has been accepted!
+Delivery Person: ${deliveryPersonName} (${deliveryPersonPhone})
+Items: ${itemDetails}
+Total Amount: ₹${order.totalAmount} (collect at delivery).`;
+
+            if (customerPhone) {
+                await sendSMS(customerPhone, body);
+            } else {
+                console.warn(`Could not send SMS for order ${orderId}: Customer phone missing or user deleted.`);
+            }
+        }
+
+        sendSuccess(res, 200, `Order ${action}ed successfully`, { shopAction, order });
     } catch (error) {
         sendError(res, 500, error.message);
     }

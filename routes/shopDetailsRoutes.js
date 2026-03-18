@@ -12,7 +12,7 @@ import {
     adminDeleteShop,
 } from "../controllers/shopDetailsController.js";
 import { authMiddleware, authorizeRoles } from "../middleware/authMiddleware.js";
-import upload from "../middleware/uploadMiddleware.js";
+import upload, { uploadAny } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -32,7 +32,7 @@ router.post(
     "/",
     authMiddleware,
     authorizeRoles("Shop", "Admin"),
-    upload.single("shopImage"),
+    uploadAny,
     createShopDetails
 );
 
@@ -44,7 +44,7 @@ router.put(
     "/",
     authMiddleware,
     authorizeRoles("Shop", "Admin"),
-    upload.single("shopImage"),
+    uploadAny,
     updateShopDetails
 );
 

@@ -20,7 +20,7 @@ export const createService = async (req, res) => {
       name,
       description,
       category,
-      image: req.file ? `/uploads/services/${req.file.filename}` : null,
+      image: req.files && req.files.length > 0 ? `/uploads/services/${req.files[0].filename}` : req.file ? `/uploads/services/${req.file.filename}` : null,
     });
 
     sendSuccess(res, 201, "Service created successfully", service);
@@ -84,7 +84,9 @@ export const updateService = async (req, res) => {
     const { id } = req.params;
 
     const updateData = { ...req.body };
-    if (req.file) {
+    if (req.files && req.files.length > 0) {
+      updateData.image = `/uploads/services/${req.files[0].filename}`;
+    } else if (req.file) {
       updateData.image = `/uploads/services/${req.file.filename}`;
     }
 

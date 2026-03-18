@@ -45,11 +45,41 @@ export const getAdvertisementById = async (req, res) => {
 // Create a new advertisement (Optional, for testing/admin purposes)
 export const createAdvertisement = async (req, res) => {
     try {
-        const { title, imageUrl, image, discount, description, time, ratings, price, isActive } = req.body;
+        const bodyObj = req.body || {};
+        const { title, imageUrl, image, discount, description, time, ratings, price, isActive } = bodyObj;
+
+        if (!title) {
+            return sendError(res, 400, "Title is required for advertisement");
+        }
+
+        // If a file was uploaded, use its path
+        console.log("LOG: Processing image...");
+        let finalImageUrl = imageUrl || image;
+
+        // When using upload.any(), files are in req.files as an array
+        if (req.files && req.files.length > 0) {
+            // Find the first file that looks like an image field
+            const imageFile = req.files.find(f =>
+                f.fieldname === 'image' ||
+                f.fieldname === 'imageUrl' ||
+                f.fieldname === 'shopImage' ||
+                f.fieldname === 'profileImage'
+            ) || req.files[0]; // Fallback to first file if no match
+
+            if (imageFile) {
+                finalImageUrl = `/uploads/advertisements/${imageFile.filename}`;
+            }
+        } else if (req.file) {
+            finalImageUrl = `/uploads/advertisements/${req.file.filename}`;
+        }
+
+        if (!finalImageUrl) {
+            return sendError(res, 400, "Image is required for advertisement");
+        }
 
         const newAd = new Advertisement({
             title,
-            imageUrl: imageUrl || image, // Support both 'imageUrl' and 'image'
+            imageUrl: finalImageUrl,
             discount,
             description,
             time,
@@ -69,11 +99,29 @@ export const createAdvertisement = async (req, res) => {
 export const updateAdvertisement = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, imageUrl, image, discount, description, time, ratings, price, isActive } = req.body;
+        const { title, imageUrl, image, discount, description, time, ratings, price, isActive } = req.body || {};
+
+        let finalImageUrl = imageUrl || image;
+
+        // When using upload.any(), files are in req.files as an array
+        if (req.files && req.files.length > 0) {
+            const imageFile = req.files.find(f =>
+                f.fieldname === 'image' ||
+                f.fieldname === 'imageUrl' ||
+                f.fieldname === 'shopImage' ||
+                f.fieldname === 'profileImage'
+            ) || req.files[0];
+
+            if (imageFile) {
+                finalImageUrl = `/uploads/advertisements/${imageFile.filename}`;
+            }
+        } else if (req.file) {
+            finalImageUrl = `/uploads/advertisements/${req.file.filename}`;
+        }
 
         const updateData = {
             title,
-            imageUrl: imageUrl || image, // Support both 'imageUrl' and 'image'
+            imageUrl: finalImageUrl,
             discount,
             description,
             time,

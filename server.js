@@ -2,6 +2,8 @@ import express from 'express';
 import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from 'url';
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
@@ -17,6 +19,9 @@ import dashboardRoutes from "./routes/dashboardRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import socketIO from "./socket.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config();
 connectDB();
 const app = express();
@@ -30,11 +35,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files BEFORE other routes
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/users", userRoutes);
-app.use("/uploads", express.static("uploads"));
 app.use("/api/chat", chatRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/shop-details", shopDetailsRoutes);

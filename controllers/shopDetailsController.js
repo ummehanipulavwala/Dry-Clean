@@ -19,7 +19,11 @@ export const createShopDetails = async (req, res) => {
             return sendError(res, 400, "Shop details already exist");
         }
 
-        const shopImage = req.file ? `/uploads/profiles/${req.file.filename}` : "";
+        const shopImage = req.files && req.files.length > 0 
+            ? `/uploads/profiles/${req.files[0].filename}` 
+            : req.file 
+            ? `/uploads/profiles/${req.file.filename}` 
+            : "";
 
         const user = await User.findById(userId);
 
@@ -69,7 +73,9 @@ export const updateShopDetails = async (req, res) => {
             ...(user?.phone && { phone: user.phone }),
         };
 
-        if (req.file) {
+        if (req.files && req.files.length > 0) {
+            updateData.shopImage = `/uploads/profiles/${req.files[0].filename}`;
+        } else if (req.file) {
             updateData.shopImage = `/uploads/profiles/${req.file.filename}`;
         }
 

@@ -7,6 +7,8 @@ const storage = multer.diskStorage({
     let dest = "uploads/profiles";
     if (req.originalUrl.includes("/services")) {
       dest = "uploads/services";
+    } else if (req.originalUrl.includes("/ads")) {
+      dest = "uploads/advertisements";
     }
     cb(null, dest);
   },
@@ -40,5 +42,7 @@ const upload = multer({
     fileSize: 2 * 1024 * 1024 // 2MB
   }
 });
+
+export const uploadAny = upload.any();
 
 export default upload;

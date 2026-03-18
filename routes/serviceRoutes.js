@@ -1,7 +1,7 @@
 import express from "express";
 import { createService, getAllServices, updateService, deleteService, getServiceById, getAllAdminServices } from "../controllers/serviceController.js";
 import { authMiddleware, authorizeRoles } from "../middleware/authMiddleware.js";
-import upload from "../middleware/uploadMiddleware.js";
+import upload, { uploadAny } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -10,7 +10,7 @@ router.post(
   "/",
   authMiddleware,
   authorizeRoles("Admin", "Shop"),
-  upload.single("image"), // field name from frontend
+  uploadAny, // field name from frontend
   createService
 );
 
@@ -33,7 +33,7 @@ router.put(
   "/:id",
   authMiddleware,
   authorizeRoles("Admin", "Shop"),
-  upload.single("image"),
+  uploadAny,
   updateService
 );
 

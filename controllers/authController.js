@@ -94,8 +94,10 @@ export const saveuserdetails = async (req, res) => {
       return sendError(res, 404, "Invalid user ID");
     }
 
-    const profileImage = req.file
-      ? req.file.path
+    const profileImage = req.files && req.files.length > 0
+      ? `/uploads/profiles/${req.files[0].filename}`
+      : req.file
+      ? `/uploads/profiles/${req.file.filename}`
       : null;
 
     // Validate required fields

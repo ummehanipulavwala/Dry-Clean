@@ -72,6 +72,12 @@ const orderSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        deliveryPersonName: {
+            type: String,
+        },
+        deliveryPersonPhone: {
+            type: String,
+        },
     },
     {
         timestamps: true,

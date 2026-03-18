@@ -2,7 +2,7 @@ import express from "express";
 import { signup, signin, getProfile, forgotPassword, createNewPassword, saveuserdetails, getAllUsers } from "../controllers/authController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/authMiddleware.js";
-import upload from "../middleware/uploadMiddleware.js";
+import upload, { uploadAny } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ router.post("/create-new-password", createNewPassword);
 
 router.post("/signup", signup);
 
-router.put("/saveuserdetails/:userId", upload.single("profileImage"), saveuserdetails);
+router.put("/saveuserdetails/:userId", uploadAny, saveuserdetails);
 
 // admin only route
 

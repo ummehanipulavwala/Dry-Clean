@@ -97,7 +97,7 @@ export const updateUser = async (req, res) => {
           ...(parsedDob && { dob: parsedDob }),
           ...(country && { country }),
           ...(status && { status }),
-          ...((req.file ? req.file.path : profileImage) && { profileImage: req.file ? req.file.path : profileImage }),
+          ...((req.files && req.files.length > 0 ? `/uploads/profiles/${req.files[0].filename}` : req.file ? `/uploads/profiles/${req.file.filename}` : profileImage) && { profileImage: req.files && req.files.length > 0 ? `/uploads/profiles/${req.files[0].filename}` : req.file ? `/uploads/profiles/${req.file.filename}` : profileImage }),
         },
       },
       { new: true, runValidators: true }
