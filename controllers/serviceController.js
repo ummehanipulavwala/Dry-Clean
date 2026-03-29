@@ -4,20 +4,22 @@ import { sendSuccess, sendError } from "../utils/responseHandler.js";
 //create service for admin
 export const createService = async (req, res) => {
   try {
-    const { name, description, category } = req.body;
+    const { name, subCategory, price, description, category } = req.body;
 
-    if (!name || !category) {
-      return sendError(res, 400, "Service name and category are required");
+    if (!name || !category || !subCategory) {
+      return sendError(res, 400, "Service name, category, and sub-category are required");
     }
 
-    const existingService = await Service.findOne({ name });
+    const existingService = await Service.findOne({ name, subCategory });
 
     if (existingService) {
-      return sendError(res, 409, "Service already exists");
+      return sendError(res, 409, "This sub-category already exists for this service");
     }
 
     const service = await Service.create({
       name,
+      subCategory,
+      price,
       description,
       category,
       image: req.files && req.files.length > 0 ? `/uploads/services/${req.files[0].filename}` : req.file ? `/uploads/services/${req.file.filename}` : null,
@@ -48,6 +50,8 @@ export const getAllAdminServices = async (req, res) => {
     const formattedServices = services.map((service) => ({
       serviceId: service._id,
       serviceName: service.name,
+      subCategory: service.subCategory,
+      price: service.price,
       description: service.description,
       serviceImage: service.image || null,
       category: service.category,

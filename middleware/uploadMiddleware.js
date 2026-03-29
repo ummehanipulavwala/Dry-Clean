@@ -1,5 +1,6 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 
 // Storage config
 const storage = multer.diskStorage({
@@ -9,6 +10,12 @@ const storage = multer.diskStorage({
       dest = "uploads/services";
     } else if (req.originalUrl.includes("/ads")) {
       dest = "uploads/advertisements";
+    } else if (req.originalUrl.includes("/delivery")) {
+      dest = "uploads/delivery";
+    }
+
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
     }
     cb(null, dest);
   },

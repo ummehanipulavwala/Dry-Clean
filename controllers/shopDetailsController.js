@@ -19,11 +19,11 @@ export const createShopDetails = async (req, res) => {
             return sendError(res, 400, "Shop details already exist");
         }
 
-        const shopImage = req.files && req.files.length > 0 
-            ? `/uploads/profiles/${req.files[0].filename}` 
-            : req.file 
-            ? `/uploads/profiles/${req.file.filename}` 
-            : "";
+        const shopImage = req.files && req.files.length > 0
+            ? `/uploads/profiles/${req.files[0].filename}`
+            : req.file
+                ? `/uploads/profiles/${req.file.filename}`
+                : "";
 
         const user = await User.findById(userId);
 
@@ -90,6 +90,26 @@ export const updateShopDetails = async (req, res) => {
         }
 
         sendSuccess(res, 200, "Shop details updated successfully", shopDetails);
+    } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};
+
+// Toggle Shop Status (Available/Unavailable)
+export const toggleShopStatus = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const shopDetails = await ShopDetails.findOne({ userId });
+
+        if (!shopDetails) {
+            return sendError(res, 404, "Shop details not found");
+        }
+
+        const newStatus = shopDetails.status === "available" ? "unavailable" : "available";
+        shopDetails.status = newStatus;
+        await shopDetails.save();
+
+        sendSuccess(res, 200, `Shop status updated to ${newStatus}`, { status: newStatus });
     } catch (error) {
         sendError(res, 500, error.message);
     }

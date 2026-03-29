@@ -1,8 +1,10 @@
 import Order from "../models/Order.js";
 import User from "../models/User.js";
+import DeliveryPerson from "../models/DeliveryPerson.js";
 import ShopOrderAction from "../models/ShopOrderAction.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 import { sendSMS } from "../utils/twilioService.js";
+import { dispatchNotification } from "../utils/notificationDispatcher.js";
 
 // Create a new order
 export const createOrder = async (req, res) => {
@@ -33,6 +35,15 @@ export const createOrder = async (req, res) => {
             deliveryAddress,
             pickupSchedule,
             totalAmount,
+        });
+
+        // Notify the Shop Owner about the new order
+        dispatchNotification({
+            req,
+            recipientId: shop,
+            type: "ORDER_PLACED",
+            message: `New order request from ${user.firstName || "customer"}!`,
+            referenceId: newOrder._id,
         });
 
         sendSuccess(res, 201, "Order created successfully", newOrder);
@@ -95,22 +106,33 @@ export const respondToOrder = async (req, res) => {
 
         await order.save();
 
-        // Send SMS if accepted
-        if (action === "Accept") {
-            const customerName = order.customer?.firstName || "Customer";
-            const customerPhone = order.customer?.phone;
+        // Notify Customer for both Accept and Reject
+        const customerName = order.customer?.firstName || "Customer";
+        const customerPhone = order.customer?.phone;
+        const customerId = order.customer?._id;
 
+        let smsBody = "";
+        if (action === "Accept") {
             const itemDetails = order.items.map(i => `${i.itemName} x${i.quantity}`).join(", ");
-            const body = `Hi ${customerName}, your order has been accepted!
+            smsBody = `Hi ${customerName}, your order has been accepted!
 Delivery Person: ${deliveryPersonName} (${deliveryPersonPhone})
 Items: ${itemDetails}
 Total Amount: ₹${order.totalAmount} (collect at delivery).`;
+        } else {
+            smsBody = `Hi ${customerName}, unfortunately your order has been rejected. Reason: ${reason || "Not specified"}. Please contact the shop for details.`;
+        }
 
-            if (customerPhone) {
-                await sendSMS(customerPhone, body);
-            } else {
-                console.warn(`Could not send SMS for order ${orderId}: Customer phone missing or user deleted.`);
-            }
+        if (customerId) {
+            dispatchNotification({
+                req,
+                recipientId: customerId,
+                type: action === "Accept" ? "ORDER_ACCEPTED" : "ORDER_REJECTED",
+                message: smsBody.split("\n")[0], // Use first line for App notification message
+                referenceId: order._id,
+                sendSmsOpts: customerPhone ? { phone: customerPhone } : null,
+            });
+        } else {
+            console.warn(`Could not notify customer for order ${orderId}: customerId missing.`);
         }
 
         sendSuccess(res, 200, `Order ${action}ed successfully`, { shopAction, order });
@@ -153,37 +175,34 @@ export const getAllOrders = async (req, res) => {
     }
 };
 
-// Get count of orders grouped by status (Active, Pending) for the logged-in shop owner
-export const getShopActiveOrders = async (req, res) => {
+// Get count of orders (All, Pending, Active) for the logged-in shop owner
+export const getShopOrderStats = async (req, res) => {
     try {
+        const userId = req.user.id;
         const counts = await Order.aggregate([
+            { $match: { shop: new mongoose.Types.ObjectId(userId) } },
             {
-                $match: {
-                    shop: req.user._id,
-                    orderStatus: { $in: ["Pending", "Active"] },
-                },
-            },
-            {
-                $group: {
-                    _id: "$orderStatus",
-                    count: { $sum: 1 },
-                },
-            },
+                $facet: {
+                    pending: [{ $match: { orderStatus: "Pending" } }, { $count: "count" }],
+                    active: [{ $match: { orderStatus: "Active" } }, { $count: "count" }],
+                    all: [{ $count: "count" }]
+                }
+            }
         ]);
 
-        // Shape into a clean object: { Active: 15, Pending: 3 }
-        const result = {};
-        counts.forEach(({ _id, count }) => {
-            result[_id] = count;
-        });
+        const result = {
+            pending: counts[0].pending[0]?.count || 0,
+            active: counts[0].active[0]?.count || 0,
+            all: counts[0].all[0]?.count || 0,
+        };
 
-        sendSuccess(res, 200, "Order counts fetched successfully", result);
+        sendSuccess(res, 200, "Shop order stats fetched successfully", result);
     } catch (error) {
         sendError(res, 500, error.message);
     }
 };
 
-// Get all requests with user name, image, pickup date/time, address, total amount & status
+// Get all requests with user info, status, service tags, and total amount
 export const getAllRequests = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -192,10 +211,9 @@ export const getAllRequests = async (req, res) => {
 
         const filter = { shop: req.user.id };
 
-        // Optional status filter  e.g. ?status=Urgent  or  ?status=Pending,Active
-        if (req.query.status) {
-            const statuses = req.query.status.split(",").map(s => s.trim());
-            filter.orderStatus = { $in: statuses };
+        // Support for "All", "Pending", "Active" filtering from UI tabs
+        if (req.query.status && req.query.status.toLowerCase() !== "all") {
+            filter.orderStatus = req.query.status.charAt(0).toUpperCase() + req.query.status.slice(1).toLowerCase();
         }
 
         const totalOrders = await Order.countDocuments(filter);
@@ -206,23 +224,36 @@ export const getAllRequests = async (req, res) => {
             .skip(skip)
             .limit(limit);
 
-        const requests = orders.map(order => ({
-            orderId: order._id,
-            userName: `${order.customer?.firstName ?? ""} ${order.customer?.lastName ?? ""}`.trim(),
-            userImage: order.customer?.profileImage ?? null,
-            pickupDate: order.pickupSchedule?.date ?? null,
-            pickupTime: order.pickupSchedule?.timeSlot ?? null,
-            pickupAddress: order.pickupAddress,
-            totalAmount: order.totalAmount,
-            status: order.orderStatus,
-            items: order.items.map(i => ({
-                service: i.service?.name ?? i.itemName,
-                quantity: i.quantity,
-                price: i.price,
-                finalPrice: i.finalPrice,
-            })),
-            createdAt: order.createdAt,
-        }));
+        const requests = orders.map(order => {
+            // Get unique service names from order items
+            const services = [...new Set(order.items.map(i => i.service?.name ?? i.itemName))];
+
+            // Format pickup time logically (Today, Tomorrow, or Date)
+            let pickupTimeStr = "Scheduled";
+            if (order.pickupSchedule && order.pickupSchedule.date) {
+                const date = new Date(order.pickupSchedule.date);
+                const today = new Date();
+                const tomorrow = new Date();
+                tomorrow.setDate(today.getDate() + 1);
+
+                let datePart = `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+                if (date.toDateString() === today.toDateString()) datePart = "Today";
+                else if (date.toDateString() === tomorrow.toDateString()) datePart = "Tomorrow";
+
+                pickupTimeStr = `${datePart}, ${order.pickupSchedule.timeSlot ?? "TBD"}`;
+            }
+
+            return {
+                orderId: order._id,
+                userName: `${order.customer?.firstName ?? ""} ${order.customer?.lastName ?? ""}`.trim(),
+                userImage: order.customer?.profileImage ?? null,
+                pickupTime: pickupTimeStr,
+                totalAmount: order.totalAmount,
+                status: order.orderStatus,
+                services: services, // Array of strings (e.g. ["Washing", "Ironing"])
+                createdAt: order.createdAt,
+            };
+        });
 
         sendSuccess(res, 200, "Requests fetched successfully", {
             requests,
@@ -251,6 +282,15 @@ export const updateOrder = async (req, res) => {
             return sendError(res, 404, "Order not found");
         }
 
+        // Notify Customer about the update
+        dispatchNotification({
+            req,
+            recipientId: order.customer,
+            type: "ORDER_UPDATED",
+            message: `Your Order #${order._id.toString().slice(-6)} has been updated to: ${order.orderStatus}`,
+            referenceId: order._id,
+        });
+
         sendSuccess(res, 200, "Order updated successfully", order);
     } catch (error) {
         sendError(res, 500, error.message);
@@ -268,6 +308,59 @@ export const deleteOrder = async (req, res) => {
 
         sendSuccess(res, 200, "Order deleted successfully");
     } catch (error) {
+        sendError(res, 500, error.message);
+    }
+};
+
+// Assign Delivery Person and Notify via SMS
+export const assignDeliveryAndNotify = async (req, res) => {
+    try {
+        const { orderId, deliveryPersonId } = req.body;
+
+        if (!orderId || !deliveryPersonId) {
+            return sendError(res, 400, "Order ID and Delivery Person ID are required");
+        }
+
+        const order = await Order.findById(orderId).populate("customer");
+        if (!order) {
+            return sendError(res, 404, "Order not found");
+        }
+
+        const deliveryPerson = await DeliveryPerson.findById(deliveryPersonId);
+        if (!deliveryPerson) {
+            return sendError(res, 404, "Delivery person not found");
+        }
+
+        // Update order
+        order.deliveryPersonName = deliveryPerson.name;
+        order.deliveryPersonPhone = deliveryPerson.phone;
+        await order.save();
+
+        // 1. Notify the Delivery Person (SMS only for now as per legacy logic, but we add DB notification too)
+        dispatchNotification({
+            req,
+            recipientId: deliveryPersonId,
+            type: "DELIVERY_ASSIGNED",
+            message: `New Delivery Assigned! Order ID: #${order._id.toString().slice(-6)}. Address: ${order.deliveryAddress}`,
+            referenceId: order._id,
+            sendSmsOpts: { phone: deliveryPerson.phone },
+        });
+
+        // 2. Notify the Customer that a delivery person is on the way
+        dispatchNotification({
+            req,
+            recipientId: order.customer._id,
+            type: "DELIVERY_ASSIGNED",
+            message: `A delivery person (${deliveryPerson.name}) has been assigned to your order!`,
+            referenceId: order._id,
+        });
+
+        sendSuccess(res, 200, "Delivery person assigned and notified successfully", {
+            orderId: order._id,
+            assignedTo: deliveryPerson.name
+        });
+    } catch (error) {
+        console.error("Error in assignDeliveryAndNotify:", error);
         sendError(res, 500, error.message);
     }
 };

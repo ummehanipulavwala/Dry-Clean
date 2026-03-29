@@ -1,5 +1,6 @@
 import Payment from "../models/Payment.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
+import { dispatchNotification } from "../utils/notificationDispatcher.js";
 
 // Get all payments for admin
 export const getAllPayments = async (req, res) => {
@@ -61,6 +62,24 @@ export const createPayment = async (req, res) => {
         });
 
         await newPayment.save();
+
+        // Notify Shop Owner
+        dispatchNotification({
+            req,
+            recipientId: shopId,
+            type: "PAYMENT_RECEIVED",
+            message: `Payment of ₹${finalAmount} received for Order #${orderId.toString().slice(-6)}`,
+            referenceId: orderId,
+        });
+
+        // Notify User
+        dispatchNotification({
+            req,
+            recipientId: userId,
+            type: "PAYMENT_RECEIVED",
+            message: `Your payment of ₹${finalAmount} has been recorded successfully.`,
+            referenceId: orderId,
+        });
 
         sendSuccess(res, 201, "Payment details added successfully", newPayment);
     } catch (error) {

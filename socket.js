@@ -1,12 +1,17 @@
 import { Server } from "socket.io";
 
-const socketIO = (server) => {
+const socketIO = (server, app) => {
     const io = new Server(server, {
         pingTimeout: 60000,
         cors: {
             origin: "*", // Adjust as needed for production
         },
     });
+
+    // Make io accessible in controllers via req.app.get("io")
+    if (app) {
+        app.set("io", io);
+    }
 
     io.on("connection", (socket) => {
         console.log("Connected to socket.io");

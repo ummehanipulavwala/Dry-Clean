@@ -64,7 +64,8 @@ const orderSchema = new mongoose.Schema(
                 "Delivered",
                 "Cancelled",
                 "Active",
-                "Urgent"
+                "Urgent",
+                "Completed"
             ],
             default: "Pending",
         },
@@ -77,6 +78,10 @@ const orderSchema = new mongoose.Schema(
         },
         deliveryPersonPhone: {
             type: String,
+        },
+        deliveryPerson: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "DeliveryPerson",
         },
     },
     {

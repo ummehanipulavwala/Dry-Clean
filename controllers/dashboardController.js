@@ -3,16 +3,18 @@ import Payment from "../models/Payment.js";
 import Service from "../models/servicemodel.js";
 import ShopDetails from "../models/Shopdetails.js";
 import Feedback from "../models/Feedback.js";
+import DeliveryPerson from "../models/DeliveryPerson.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 export const getDashboardStats = async (req, res) => {
     try {
-        const [totalOrders, totalPayments, totalServices, totalShops, totalFeedback] = await Promise.all([
+        const [totalOrders, totalPayments, totalServices, totalShops, totalFeedback, totalDeliveryPersons] = await Promise.all([
             Order.countDocuments(),
             Payment.countDocuments(),
             Service.countDocuments(),
             ShopDetails.countDocuments(),
-            Feedback.countDocuments()
+            Feedback.countDocuments(),
+            DeliveryPerson.countDocuments()
         ]);
 
         // Aggregate total revenue from payments using finalAmount
@@ -58,7 +60,8 @@ export const getDashboardStats = async (req, res) => {
                 services: totalServices,
                 shops: totalShops,
                 feedback: totalFeedback,
-                revenue: totalRevenue
+                revenue: totalRevenue,
+                deliveryPersons: totalDeliveryPersons
             },
             recentOrders,
             popularServices: popularServices.length > 0 ? popularServices : [

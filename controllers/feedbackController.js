@@ -1,5 +1,7 @@
 import Feedback from "../models/Feedback.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
+import { dispatchNotification } from "../utils/notificationDispatcher.js";
+import User from "../models/User.js";
 
 // Create Feedback
 export const createFeedback = async (req, res) => {
@@ -15,6 +17,19 @@ export const createFeedback = async (req, res) => {
             userId,
             rating,
             comment,
+        });
+
+        // Notify Admins about new feedback (asynchronous)
+        User.find({ role: "Admin" }).then(admins => {
+            admins.forEach(admin => {
+                dispatchNotification({
+                    req,
+                    recipientId: admin._id,
+                    type: "NEW_FEEDBACK",
+                    message: `New feedback received: ${rating} stars.`,
+                    referenceId: feedback._id,
+                });
+            });
         });
 
         sendSuccess(res, 201, "Feedback submitted successfully", feedback);

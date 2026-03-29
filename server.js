@@ -17,6 +17,8 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
+import deliveryRoutes from "./routes/deliveryRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import socketIO from "./socket.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,8 +29,8 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.IO
-socketIO(server);
+// Initialize Socket.IO with app reference
+socketIO(server, app);
 
 // Middleware
 app.use(cors());
@@ -52,6 +54,8 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/delivery", deliveryRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.send("welcome to dry clean...");

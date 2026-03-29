@@ -5,8 +5,17 @@ const serviceSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      unique: true, // No duplicate services
       trim: true,
+    },
+    subCategory: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    price: {
+      type: Number,
+      required: true,
+      default: 0,
     },
     description: String,
     category: {
