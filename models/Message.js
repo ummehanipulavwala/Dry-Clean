@@ -12,6 +12,10 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    receiver: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     text: {
       type: String,
       required: true,
@@ -25,9 +29,6 @@ const messageSchema = new mongoose.Schema(
       type: String,
     },
     time: {
-      type: String,
-    },
-    receiver: {
       type: String,
     },
   },

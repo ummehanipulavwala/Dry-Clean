@@ -34,7 +34,7 @@ export const sendMessage = async (req, res) => {
       text,
       date,
       time,
-      reciever: userId,
+      receiver: userId,
     });
 
     await Chat.findByIdAndUpdate(targetChatId, {
@@ -60,6 +60,7 @@ export const getMessages = async (req, res) => {
 
     const messages = await Message.find({ chatId })
       .populate("sender", "firstName lastName role")
+      .populate("receiver", "firstName lastName role")
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
@@ -167,7 +168,7 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
-// clear all chats between sender and reciever (by chatId)
+// clear all chats between sender and receiver (by chatId)
 export const clearChat = async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -241,6 +242,7 @@ export const getChatHistory = async (req, res) => {
     // Fetch messages for this chat
     const messages = await Message.find({ chatId: chat._id })
       .populate("sender", "firstName lastName role")
+      .populate("receiver", "firstName lastName role")
       .sort({ createdAt: 1 });
 
     sendSuccess(res, 200, "Chat history fetched", messages);
@@ -317,6 +319,7 @@ export const getChatsForUser = async (req, res) => {
           time: recentMessageDoc ? recentMessageDoc.time : "",
           date: recentMessageDoc ? recentMessageDoc.date : "",
           unreadCount: unreadCount,
+          receiverId: partnerId, // Added receiverId for the chat partner
         };
       })
     );
