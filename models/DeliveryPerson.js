@@ -67,9 +67,12 @@ const deliveryPersonSchema = new mongoose.Schema({
                 const d = new Date(ret.updatedAt);
                 ret.updatedAt = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
             }
+<<<<<<< HEAD
             // Add aliases for UI compatibility
             ret.assigned = ret.assignedOrders ?? 0;
             ret.completed = ret.completedDeliveries ?? 0;
+=======
+>>>>>>> c14c409 (order calculate payment)
             return ret;
         },
     },

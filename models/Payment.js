@@ -60,6 +60,18 @@ const paymentSchema = new mongoose.Schema(
         settlementDate: {
             type: Date,
         },
+<<<<<<< HEAD
+=======
+        breakdown: [
+            {
+                serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
+                serviceName: String,
+                quantity: Number,
+                pricePerUnit: Number,
+                subtotal: Number,
+            }
+        ],
+>>>>>>> c14c409 (order calculate payment)
     },
     {
         timestamps: true,

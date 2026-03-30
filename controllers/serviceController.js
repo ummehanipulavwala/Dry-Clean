@@ -4,6 +4,7 @@ import { sendSuccess, sendError } from "../utils/responseHandler.js";
 //create service for admin
 export const createService = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { name, subCategory, price, description, category } = req.body;
 
     if (!name || !category || !subCategory) {
@@ -14,12 +15,27 @@ export const createService = async (req, res) => {
 
     if (existingService) {
       return sendError(res, 409, "This sub-category already exists for this service");
+=======
+    const { name, description, category } = req.body;
+
+    if (!name || !category) {
+      return sendError(res, 400, "Service name and category are required");
+    }
+
+    const existingService = await Service.findOne({ name });
+
+    if (existingService) {
+      return sendError(res, 409, "Service already exists");
+>>>>>>> c14c409 (order calculate payment)
     }
 
     const service = await Service.create({
       name,
+<<<<<<< HEAD
       subCategory,
       price,
+=======
+>>>>>>> c14c409 (order calculate payment)
       description,
       category,
       image: req.files && req.files.length > 0 ? `/uploads/services/${req.files[0].filename}` : req.file ? `/uploads/services/${req.file.filename}` : null,
@@ -50,8 +66,11 @@ export const getAllAdminServices = async (req, res) => {
     const formattedServices = services.map((service) => ({
       serviceId: service._id,
       serviceName: service.name,
+<<<<<<< HEAD
       subCategory: service.subCategory,
       price: service.price,
+=======
+>>>>>>> c14c409 (order calculate payment)
       description: service.description,
       serviceImage: service.image || null,
       category: service.category,

@@ -41,24 +41,7 @@ export const createDeliveryPerson = async (req, res) => {
 // Get all delivery persons
 export const getAllDeliveryPersons = async (req, res) => {
     try {
-        const personsRaw = await DeliveryPerson.find().sort({ createdAt: -1 });
-        
-        // Explicitly map fields for compatibility with Admin UI expectations
-        const persons = personsRaw.map(p => {
-            const obj = p.toJSON();
-            return {
-                ...obj,
-                // Ensure assigned and completed are present and are numbers
-                assigned: Number(obj.assignedOrders || 0),
-                completed: Number(obj.completedDeliveries || 0),
-                // Providing common phone aliases just in case
-                phone: obj.phone,
-                phoneNumber: obj.phone,
-                phone_no: obj.phone,
-                contact: obj.phone
-            };
-        });
-
+        const persons = await DeliveryPerson.find().sort({ createdAt: -1 });
         sendSuccess(res, 200, "Delivery persons fetched successfully", persons);
     } catch (error) {
         sendError(res, 500, "Server Error", error.message);
@@ -97,33 +80,15 @@ export const updateDeliveryPerson = async (req, res) => {
 
         // Check both body and query for data (to be flexible with Postman)
         const sources = [req.body, req.query];
-        let validationError = null;
-
         sources.forEach(source => {
-            if (source && !validationError) {
+            if (source) {
                 allowedFields.forEach(field => {
                     if (source[field] !== undefined) {
-                        // Validate phone if it's being updated
-                        if (field === 'phone') {
-                            const phoneVal = String(source[field]).trim();
-                            if (!phoneVal) {
-                                validationError = "Phone number cannot be empty";
-                            } else if (!/^\d{10}$/.test(phoneVal)) {
-                                validationError = "Phone number must be exactly 10 digits";
-                            } else {
-                                updateData[field] = phoneVal;
-                            }
-                        } else {
-                            updateData[field] = source[field];
-                        }
+                        updateData[field] = source[field];
                     }
                 });
             }
         });
-
-        if (validationError) {
-            return sendError(res, 400, validationError);
-        }
 
         // Handle file uploads
         if (req.files && req.files.length > 0) {

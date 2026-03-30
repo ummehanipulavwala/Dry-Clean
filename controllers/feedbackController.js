@@ -1,7 +1,10 @@
 import Feedback from "../models/Feedback.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
+<<<<<<< HEAD
 import { dispatchNotification } from "../utils/notificationDispatcher.js";
 import User from "../models/User.js";
+=======
+>>>>>>> c14c409 (order calculate payment)
 
 // Create Feedback
 export const createFeedback = async (req, res) => {
@@ -19,6 +22,7 @@ export const createFeedback = async (req, res) => {
             comment,
         });
 
+<<<<<<< HEAD
         // Notify Admins about new feedback (asynchronous)
         User.find({ role: "Admin" }).then(admins => {
             admins.forEach(admin => {
@@ -32,6 +36,8 @@ export const createFeedback = async (req, res) => {
             });
         });
 
+=======
+>>>>>>> c14c409 (order calculate payment)
         sendSuccess(res, 201, "Feedback submitted successfully", feedback);
     } catch (error) {
         sendError(res, 500, error.message);

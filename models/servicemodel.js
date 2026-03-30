@@ -5,6 +5,7 @@ const serviceSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+<<<<<<< HEAD
       trim: true,
     },
     subCategory: {
@@ -17,6 +18,11 @@ const serviceSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+=======
+      unique: true, // No duplicate services
+      trim: true,
+    },
+>>>>>>> c14c409 (order calculate payment)
     description: String,
     category: {
       type: String,
