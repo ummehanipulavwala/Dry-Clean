@@ -42,12 +42,6 @@ export const createOrder = async (req, res) => {
             await user.save();
         }
 
-<<<<<<< HEAD
-        const newOrder = await Order.create({
-            customer: req.user.id,
-            shop,
-            items,
-=======
         // Fetch shop details to get shop-specific prices
         // Supporting both ShopDetails _id and owner userId
         let shopDoc = await ShopDetails.findById(shop).populate("services.serviceId");
@@ -113,7 +107,6 @@ export const createOrder = async (req, res) => {
                 price: item.pricePerUnit,
                 finalPrice: item.subtotal
             })),
->>>>>>> c14c409 (order calculate payment)
             pickupAddress,
             deliveryAddress,
             pickupSchedule,
