@@ -50,7 +50,7 @@ const shopDetailsSchema = new mongoose.Schema(
         }],
         status: {
             type: String,
-            enum: ["available", "unavailable"],
+            enum: ["available", "unavailable", "Active", "Inactive"],
             default: "available",
         },
         reviews: [
