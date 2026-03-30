@@ -3,30 +3,21 @@ import Order from "../models/Order.js";
 import User from "../models/User.js";
 import DeliveryPerson from "../models/DeliveryPerson.js";
 import ShopOrderAction from "../models/ShopOrderAction.js";
-<<<<<<< HEAD
-import { sendSuccess, sendError } from "../utils/responseHandler.js";
-import { sendSMS } from "../utils/twilioService.js";
-import { dispatchNotification } from "../utils/notificationDispatcher.js";
-=======
 import Payment from "../models/Payment.js";
 import Service from "../models/servicemodel.js";
 import ShopDetails from "../models/Shopdetails.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 import { sendSMS } from "../utils/twilioService.js";
->>>>>>> c14c409 (order calculate payment)
 
 // Create a new order
 export const createOrder = async (req, res) => {
     try {
-<<<<<<< HEAD
         const { shop, items, pickupAddress, deliveryAddress, pickupSchedule, totalAmount, phone } = req.body;
 
         if (!shop || !items || items.length === 0 || !pickupAddress || !deliveryAddress || !pickupSchedule || !totalAmount) {
-=======
         const { shop, services, pickupAddress, deliveryAddress, pickupSchedule, phone } = req.body;
 
         if (!shop || !services || services.length === 0 || !pickupAddress || !deliveryAddress || !pickupSchedule) {
->>>>>>> c14c409 (order calculate payment)
             return sendError(res, 400, "All required fields must be provided");
         }
 
