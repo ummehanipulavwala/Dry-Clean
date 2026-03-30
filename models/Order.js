@@ -79,12 +79,10 @@ const orderSchema = new mongoose.Schema(
         deliveryPersonPhone: {
             type: String,
         },
-<<<<<<< HEAD
         deliveryPerson: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "DeliveryPerson",
         },
-=======
         priceBreakdown: [
             {
                 serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
@@ -95,7 +93,6 @@ const orderSchema = new mongoose.Schema(
             }
         ],
         paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
->>>>>>> c14c409 (order calculate payment)
     },
     {
         timestamps: true,

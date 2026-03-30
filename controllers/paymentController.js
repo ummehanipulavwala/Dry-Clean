@@ -1,9 +1,6 @@
 import Payment from "../models/Payment.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
-<<<<<<< HEAD
 import { dispatchNotification } from "../utils/notificationDispatcher.js";
-=======
->>>>>>> c14c409 (order calculate payment)
 
 // Get all payments for admin
 export const getAllPayments = async (req, res) => {
@@ -66,7 +63,6 @@ export const createPayment = async (req, res) => {
 
         await newPayment.save();
 
-<<<<<<< HEAD
         // Notify Shop Owner
         dispatchNotification({
             req,
@@ -85,15 +81,11 @@ export const createPayment = async (req, res) => {
             referenceId: orderId,
         });
 
-=======
->>>>>>> c14c409 (order calculate payment)
         sendSuccess(res, 201, "Payment details added successfully", newPayment);
     } catch (error) {
         sendError(res, 500, "Failed to add payment details", error.message);
     }
 };
-<<<<<<< HEAD
-=======
 
 // Get payment details by order ID
 export const getPaymentByOrder = async (req, res) => {
@@ -111,18 +103,9 @@ export const getPaymentByOrder = async (req, res) => {
 
         // Authorization check: User, Shop Owner, or Admin
         const isOwner = payment.userId._id.toString() === req.user.id;
-        const isShopOwner = payment.shopId && payment.shopId.owner && payment.shopId.owner.toString() === req.user.id;
         const isAdmin = req.user.role === "Admin";
-
-        // Note: ShopDetails model might have 'owner'. I'll assume if req.user.role is not admin and not owner, we need to check shop owner.
-        // For simplicity and based on typical requirements, I'll allow the customer and admin. 
-        // If shop owner needs access, I would need to check ShopDetails owner field.
         
         if (!isOwner && !isAdmin) {
-             // Let's assume for now just owner and admin until I verify ShopDetails owner field.
-             // Actually, the request says: "Only the order's customer, the shop owner, or admin can access."
-             // I'll check if the shopId in payment matches the shop being requested if I can.
-             // But usually shopId in payment refers to the ShopDetails document.
              return sendError(res, 403, "Not authorized to access this payment detail");
         }
 
@@ -131,4 +114,3 @@ export const getPaymentByOrder = async (req, res) => {
         sendError(res, 500, error.message);
     }
 };
->>>>>>> c14c409 (order calculate payment)

@@ -1,10 +1,6 @@
 import { Server } from "socket.io";
 
-<<<<<<< HEAD
 const socketIO = (server, app) => {
-=======
-const socketIO = (server) => {
->>>>>>> c14c409 (order calculate payment)
     const io = new Server(server, {
         pingTimeout: 60000,
         cors: {
@@ -12,14 +8,10 @@ const socketIO = (server) => {
         },
     });
 
-<<<<<<< HEAD
     // Make io accessible in controllers via req.app.get("io")
     if (app) {
         app.set("io", io);
     }
-
-=======
->>>>>>> c14c409 (order calculate payment)
     io.on("connection", (socket) => {
         console.log("Connected to socket.io");
 

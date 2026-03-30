@@ -10,10 +10,7 @@ import {
     adminCreateShop,
     adminUpdateShop,
     adminDeleteShop,
-<<<<<<< HEAD
     toggleShopStatus,
-=======
->>>>>>> c14c409 (order calculate payment)
 } from "../controllers/shopDetailsController.js";
 import { authMiddleware, authorizeRoles } from "../middleware/authMiddleware.js";
 import upload, { uploadAny } from "../middleware/uploadMiddleware.js";
@@ -52,12 +49,9 @@ router.put(
     updateShopDetails
 );
 
-<<<<<<< HEAD
 // Toggle Shop Status (Available/Unavailable)
 router.patch("/toggle-status", authMiddleware, authorizeRoles("Shop"), toggleShopStatus);
 
-=======
->>>>>>> c14c409 (order calculate payment)
 // Get All Shops (Public)
 router.get("/", getAllShops);
 

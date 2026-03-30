@@ -19,19 +19,11 @@ export const createShopDetails = async (req, res) => {
             return sendError(res, 400, "Shop details already exist");
         }
 
-<<<<<<< HEAD
         const shopImage = req.files && req.files.length > 0
             ? `/uploads/profiles/${req.files[0].filename}`
             : req.file
                 ? `/uploads/profiles/${req.file.filename}`
                 : "";
-=======
-        const shopImage = req.files && req.files.length > 0 
-            ? `/uploads/profiles/${req.files[0].filename}` 
-            : req.file 
-            ? `/uploads/profiles/${req.file.filename}` 
-            : "";
->>>>>>> c14c409 (order calculate payment)
 
         const user = await User.findById(userId);
 
@@ -39,18 +31,11 @@ export const createShopDetails = async (req, res) => {
             userId,
             shopName,
             shopAddress,
-<<<<<<< HEAD
-            phone: user?.phone || "0000000000", // Fallback if user somehow lacks a phone
-            shopRatings: shopRatings || 0,
-            shopImage,
-            status: status || "available",
-=======
             phone: user?.phone || "0000000000",
             shopRatings: shopRatings || 0,
             shopImage,
             status: status || "available",
-            services: services ? services.filter((v, i, a) => a.findIndex(t => (t.serviceId === v.serviceId)) === i) : []
->>>>>>> c14c409 (order calculate payment)
+            services: req.body.services ? req.body.services.filter((v, i, a) => a.findIndex(t => (t.serviceId === v.serviceId)) === i) : []
         });
 
         sendSuccess(res, 201, "Shop details created successfully", shopDetails);
@@ -111,7 +96,6 @@ export const updateShopDetails = async (req, res) => {
     }
 };
 
-<<<<<<< HEAD
 // Toggle Shop Status (Available/Unavailable)
 export const toggleShopStatus = async (req, res) => {
     try {
@@ -132,8 +116,6 @@ export const toggleShopStatus = async (req, res) => {
     }
 };
 
-=======
->>>>>>> c14c409 (order calculate payment)
 // Get All Shops (Public)
 export const getAllShops = async (req, res) => {
     try {
@@ -298,11 +280,7 @@ export const adminCreateShop = async (req, res) => {
             commissionPercentage: commissionPercentage || 0,
             shopRatings: 0,
             shopImage: "",
-<<<<<<< HEAD
-            services: services || []
-=======
             services: services ? services.filter((v, i, a) => a.findIndex(t => (t.serviceId === v.serviceId)) === i) : []
->>>>>>> c14c409 (order calculate payment)
         });
 
         sendSuccess(res, 201, "Shop and User created successfully", {
@@ -347,13 +325,9 @@ export const adminUpdateShop = async (req, res) => {
                     ...(pincode && { pincode }),
                     ...(location && { location }),
                     ...(commissionPercentage !== undefined && { commissionPercentage }),
-<<<<<<< HEAD
-                    ...(services && { services }),
-=======
                     ...(services && { 
                         services: services.filter((v, i, a) => a.findIndex(t => (t.serviceId === v.serviceId)) === i) 
                     }),
->>>>>>> c14c409 (order calculate payment)
                 }
             },
             { new: true }

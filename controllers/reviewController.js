@@ -1,9 +1,6 @@
 import ShopDetails from "../models/Shopdetails.js";
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
-<<<<<<< HEAD
 import { dispatchNotification } from "../utils/notificationDispatcher.js";
-=======
->>>>>>> c14c409 (order calculate payment)
 
 // Add a review for a shop
 export const addReview = async (req, res) => {
@@ -27,7 +24,6 @@ export const addReview = async (req, res) => {
         const updatedShop = await ShopDetails.findById(shopId).populate("reviews.userId", "firstName lastName");
         const addedReview = updatedShop.reviews[updatedShop.reviews.length - 1];
 
-<<<<<<< HEAD
         // Notify Shop Owner about the new review
         dispatchNotification({
             req,
@@ -37,8 +33,6 @@ export const addReview = async (req, res) => {
             referenceId: shopId,
         });
 
-=======
->>>>>>> c14c409 (order calculate payment)
         sendSuccess(res, 201, "Review added successfully", addedReview);
     } catch (error) {
         sendError(res, 500, error.message);
@@ -132,11 +126,7 @@ export const updateReview = async (req, res) => {
         }
 
         const review = shop.reviews.id(id);
-<<<<<<< HEAD
-
-=======
         
->>>>>>> c14c409 (order calculate payment)
         if (review.userId.toString() !== req.user.id.toString()) {
             return sendError(res, 403, "You can only edit your own reviews");
         }

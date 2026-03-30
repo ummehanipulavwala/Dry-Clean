@@ -45,10 +45,6 @@ const shopDetailsSchema = new mongoose.Schema(
             default: 0,
         },
         services: [{
-<<<<<<< HEAD
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Service",
-=======
             serviceId: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "Service",
@@ -58,7 +54,6 @@ const shopDetailsSchema = new mongoose.Schema(
                 required: true,
                 min: 0
             }
->>>>>>> c14c409 (order calculate payment)
         }],
         status: {
             type: String,
