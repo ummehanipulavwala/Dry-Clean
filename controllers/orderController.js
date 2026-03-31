@@ -97,6 +97,11 @@ export const createOrder = async (req, res) => {
             priceBreakdown // Detailed breakdown stored in order
         });
 
+        // Calculate platform commission and shop revenue
+        const commissionPercent = shopDoc.commissionPercentage || 10;
+        const platformCommissionAmount = (totalAmount * commissionPercent) / 100;
+        const shopAmount = totalAmount - platformCommissionAmount;
+
         // Create Payment document
         const newPayment = await Payment.create({
             orderId: newOrder._id,
@@ -105,7 +110,11 @@ export const createOrder = async (req, res) => {
             totalAmount,
             finalAmount: totalAmount,
             breakdown: priceBreakdown,
-            paymentStatus: "Pending"
+            paymentStatus: "Pending",
+            platformCommissionPercent: commissionPercent,
+            platformCommissionAmount,
+            shopAmount,
+            settlementStatus: "Pending"
         });
 
         // Link Payment to Order
@@ -443,6 +452,19 @@ export const updateOrder = async (req, res) => {
             return sendError(res, 404, "Order not found");
         }
 
+        // Sync Payment Status if Order is Delivered or Completed
+        if (req.body.orderStatus && ["Delivered", "Completed"].includes(req.body.orderStatus)) {
+            await Payment.findOneAndUpdate(
+                { orderId: order._id },
+                {
+                    $set: {
+                        paymentStatus: "Collected",
+                        paymentCollectedAt: new Date()
+                    }
+                }
+            );
+        }
+
         dispatchNotification({
             req,
             recipientId: order.customer,
@@ -479,10 +501,13 @@ export const assignDeliveryAndNotify = async (req, res) => {
             return sendError(res, 400, "Order ID and Delivery Person ID are required");
         }
 
-        const order = await Order.findById(orderId).populate("customer");
+        const order = await Order.findById(orderId).populate("customer").populate("items.service");
         if (!order) {
             return sendError(res, 404, "Order not found");
         }
+
+        const shopDetails = await ShopDetails.findOne({ userId: order.shop });
+        const shopName = shopDetails ? shopDetails.shopName : "Partner Shop";
 
         const deliveryPerson = await DeliveryPerson.findById(deliveryPersonId);
         if (!deliveryPerson) {
@@ -495,7 +520,11 @@ export const assignDeliveryAndNotify = async (req, res) => {
         await order.save();
 
         const customerName = `${order.customer?.firstName || ""} ${order.customer?.lastName || ""}`.trim() || "Customer";
-        const smsBody = `New Delivery Assigned!\nOrder ID: #${order._id.toString().slice(-6)}\nAddress: ${order.deliveryAddress}\nTotal: ₹${order.totalAmount}`;
+        const itemsList = order.items && order.items.length > 0
+            ? order.items.map(i => `${i.itemName} x${i.quantity}`).join(", ")
+            : "Laundry Items";
+
+        const smsBody = `New Delivery!\nDear ${deliveryPerson.name},\nCustomer: ${customerName}\nShop: ${shopName}\nAddress: ${order.deliveryAddress}\nDetails: ${itemsList}\nTotal Amount To Collect: ₹${order.totalAmount}`;
 
         // Notify Delivery Person
         dispatchNotification({

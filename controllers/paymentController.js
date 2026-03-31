@@ -6,14 +6,78 @@ import { dispatchNotification } from "../utils/notificationDispatcher.js";
 export const getAllPayments = async (req, res) => {
     try {
         const payments = await Payment.find()
-            .populate("userId", "firstName lastName email phone")
-            .populate("shopId", "shopName shopAddress")
+            .populate("userId", "firstName lastName name email phone address city state pincode country profileImage")
+            .populate("shopId", "shopName shopAddress userId")
             .populate("orderId")
             .sort({ createdAt: -1 });
 
         sendSuccess(res, 200, "All payments fetched successfully", payments);
     } catch (error) {
         sendError(res, 500, "Failed to fetch payments", error.message);
+    }
+};
+
+// Update Settlement Status
+export const updateSettlementStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!["Pending", "Settled"].includes(status)) {
+            return sendError(res, 400, "Invalid settlement status. Must be 'Pending' or 'Settled'.");
+        }
+
+        const updateData = { settlementStatus: status };
+        if (status === "Settled") {
+            updateData.settlementDate = new Date();
+            updateData.paymentStatus = "Completed"; // Sync overall payment status
+        } else {
+            updateData.settlementDate = null;
+            // Optionally revert status if needed: updateData.paymentStatus = "Pending";
+        }
+
+        const updatedPayment = await Payment.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true }
+        ).populate("shopId", "shopName");
+
+        if (!updatedPayment) {
+            return sendError(res, 404, "Payment record not found");
+        }
+
+        // Notify Shop Owner of Settlement
+        if (status === "Settled" && updatedPayment.shopId) {
+            const orderIdStr = updatedPayment.orderId ? updatedPayment.orderId.toString().slice(-6) : "Unknown";
+            dispatchNotification({
+                req,
+                recipientId: updatedPayment.shopId.userId || updatedPayment.shopId._id, // Use userId if available, otherwise _id
+                type: "SETTLEMENT_COMPLETED",
+                message: `Your settlement of ₹${updatedPayment.shopAmount} for Order #${orderIdStr} has been processed.`,
+                referenceId: updatedPayment.orderId,
+            });
+        }
+
+        sendSuccess(res, 200, "Settlement status updated successfully", updatedPayment);
+    } catch (error) {
+        console.error("Error in updateSettlementStatus:", error);
+        sendError(res, 500, "Failed to update settlement status", error.message);
+    }
+};
+
+// Delete Payment Record
+export const deletePayment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedPayment = await Payment.findByIdAndDelete(id);
+
+        if (!deletedPayment) {
+            return sendError(res, 404, "Payment record not found");
+        }
+
+        sendSuccess(res, 200, "Payment record deleted successfully");
+    } catch (error) {
+        sendError(res, 500, "Failed to delete payment record", error.message);
     }
 };
 
@@ -104,9 +168,9 @@ export const getPaymentByOrder = async (req, res) => {
         // Authorization check: User, Shop Owner, or Admin
         const isOwner = payment.userId._id.toString() === req.user.id;
         const isAdmin = req.user.role === "Admin";
-        
+
         if (!isOwner && !isAdmin) {
-             return sendError(res, 403, "Not authorized to access this payment detail");
+            return sendError(res, 403, "Not authorized to access this payment detail");
         }
 
         sendSuccess(res, 200, "Payment details fetched successfully", payment);

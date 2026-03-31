@@ -263,6 +263,10 @@ export const getChatsForUser = async (req, res) => {
     const total = await Chat.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
+    // Fetch the current user to define the base role for the chat list
+    const currentUser = await User.findById(userId);
+    const currentUserRole = currentUser ? currentUser.role : "User";
+
     // Find paginated chats the user is a member of
     const chats = await Chat.find(query)
       .sort({ updatedAt: -1 })
@@ -281,9 +285,6 @@ export const getChatsForUser = async (req, res) => {
         // Fetch user details for the partner
         const partnerUser = await User.findById(partnerId);
 
-        // Fetch shop details for the partner if they have any
-        const shop = await ShopDetails.findOne({ userId: partnerId });
-
         // Fetch only the most recent message for the chat list summary
         const recentMessageDoc = await Message.findOne({ chatId: chat._id }).sort({ createdAt: -1 });
 
@@ -294,32 +295,44 @@ export const getChatsForUser = async (req, res) => {
           isRead: false,
         });
 
-        // Determine display name and image
+        // Determine display name and image based on the partner's actual role
         let displayName = "Unknown User";
         let displayImage = "";
         let role = "User";
 
-        if (shop && shop.shopName) {
-          displayName = shop.shopName;
-          displayImage = shop.shopImage || "";
-          role = "Shop";
-        } else if (partnerUser) {
-          displayName = partnerUser.firstName ? `${partnerUser.firstName} ${partnerUser.lastName}`.trim() : partnerUser.name || "User";
-          displayImage = partnerUser.profileImage || "";
+        if (partnerUser) {
           role = partnerUser.role || "User";
+
+          if (role === "Shop") {
+            const shop = await ShopDetails.findOne({ userId: partnerId });
+            if (shop && shop.shopName) {
+              displayName = shop.shopName;
+              displayImage = shop.shopImage || "";
+            } else {
+              displayName = partnerUser.firstName ? `${partnerUser.firstName} ${partnerUser.lastName}`.trim() : partnerUser.name || "Shop";
+              displayImage = partnerUser.profileImage || "";
+            }
+          } else {
+            displayName = partnerUser.firstName ? `${partnerUser.firstName} ${partnerUser.lastName}`.trim() : partnerUser.name || "User";
+            displayImage = partnerUser.profileImage || "";
+          }
         }
 
         return {
           chatId: chat._id,
+          senderId: userId, // Added senderId logic
           partnerId: partnerId,
-          role: role,
+          role: currentUserRole,    // Current user's (token's) role
+          partnerRole: role,        // The chat partner's actual role
+          name: displayName,        // Expose generic name too
+          image: displayImage,      // Expose generic image too
           shopname: displayName,
           shopimage: displayImage,
           recentMessage: recentMessageDoc ? recentMessageDoc.text : "",
           time: recentMessageDoc ? recentMessageDoc.time : "",
           date: recentMessageDoc ? recentMessageDoc.date : "",
           unreadCount: unreadCount,
-          receiverId: partnerId, // Added receiverId for the chat partner
+          receiverId: partnerId, // The chat partner is the receiver
         };
       })
     );

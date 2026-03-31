@@ -38,13 +38,17 @@ export const createFeedback = async (req, res) => {
     }
 };
 
-// Get All Feedbacks
+// Get All Feedbacks (Simplified for debugging)
 export const getAllFeedbacks = async (req, res) => {
     try {
         const feedbacks = await Feedback.find()
-            .populate("userId", "name firstName lastName profileImage")
+            .populate("userId", "name firstName lastName")
             .sort({ createdAt: -1 });
 
+        console.log(`Backend: Sending ${feedbacks.length} feedbacks`);
+        if (feedbacks.length > 0) {
+            console.log('DEBUG_FIRST_FEEDBACK_USER:', feedbacks[0].userId);
+        }
         sendSuccess(res, 200, "Feedbacks fetched successfully", feedbacks);
     } catch (error) {
         sendError(res, 500, error.message);

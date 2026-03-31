@@ -7,7 +7,7 @@ const router = express.Router();
 // Create Feedback (Authenticated)
 router.post("/", authMiddleware, createFeedback);
 
-// Get All Feedbacks (Public/Admin)
-router.get("/", getAllFeedbacks);
+// Get All Feedbacks (Authenticated)
+router.get("/", authMiddleware, getAllFeedbacks);
 
 export default router;

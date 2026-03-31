@@ -131,7 +131,7 @@ export const getShopById = async (req, res) => {
     try {
         const shop = await ShopDetails.findById(req.params.id)
             .populate("userId", "firstName lastName email city")
-            .populate("services");
+            .populate("services.serviceId");
         if (!shop) {
             return sendError(res, 404, "Shop not found");
         }
@@ -164,7 +164,34 @@ export const getShopById = async (req, res) => {
             }
         }
 
-        sendSuccess(res, 200, "Shop details fetched successfully", shop);
+        // Flatten services for frontend — with manual fallback for legacy data
+        const allServices = await Service.find();
+        const serviceMap = {};
+        allServices.forEach(svc => { serviceMap[svc._id.toString()] = svc; });
+
+        const flattenedServices = shop.services.map(s => {
+            const svc = s.toObject();
+            const populated = s.serviceId && typeof s.serviceId === 'object' ? s.serviceId : null;
+            const rawId = svc.serviceId?.toString() || svc._id?.toString();
+            const fallback = rawId ? serviceMap[rawId] : null;
+            const resolved = populated || fallback;
+            return {
+                ...svc,
+                name: resolved?.name || svc.name || "Unknown Service",
+                description: resolved?.description || svc.description || "No description available",
+                image: resolved?.image || svc.image || "",
+                isActive: resolved?.isActive ?? svc.isActive ?? false,
+                category: resolved?.category || svc.category || "General",
+                subCategory: resolved?.subCategory || svc.subCategory || "General"
+            };
+        });
+
+        const shopResponse = {
+            ...shop.toObject(),
+            services: flattenedServices
+        };
+
+        sendSuccess(res, 200, "Shop details fetched successfully", shopResponse);
     } catch (error) {
         sendError(res, 500, error.message);
     }
@@ -196,7 +223,12 @@ export const getAdminShops = async (req, res) => {
     try {
         const shops = await ShopDetails.find()
             .populate("userId", "firstName lastName name email phone status")
-            .populate("services");
+            .populate("services.serviceId");
+
+        // Load all services once for manual fallback matching
+        const allServices = await Service.find();
+        const serviceMap = {};
+        allServices.forEach(svc => { serviceMap[svc._id.toString()] = svc; });
 
         const enrichedShops = await Promise.all(
             shops.map(async (shop) => {
@@ -218,14 +250,26 @@ export const getAdminShops = async (req, res) => {
                     status: user.status || "Active",
                     commissionPercentage: shop.commissionPercentage || 0,
                     totalOrders: totalOrders,
-                    services: shop.services || []
+                    services: (shop.services || []).map(s => {
+                        const svc = s.toObject ? s.toObject() : s;
+                        // Try populated ref first, then fall back to manual id match
+                        const populated = s.serviceId && typeof s.serviceId === 'object' ? s.serviceId : null;
+                        const rawId = svc.serviceId?.toString() || svc._id?.toString();
+                        const fallback = rawId ? serviceMap[rawId] : null;
+                        const resolved = populated || fallback;
+                        return {
+                            ...svc,
+                            name: resolved?.name || svc.name || "Unknown Service",
+                            description: resolved?.description || svc.description || "No description available",
+                            image: resolved?.image || svc.image || "",
+                            isActive: resolved?.isActive ?? svc.isActive ?? false
+                        };
+                    })
                 };
             })
         );
 
-        // Filter out nulls in case of dangling shop details
         const filteredShops = enrichedShops.filter(s => s !== null);
-
         sendSuccess(res, 200, "Admin shops fetched successfully", filteredShops);
     } catch (error) {
         sendError(res, 500, error.message);
@@ -280,7 +324,10 @@ export const adminCreateShop = async (req, res) => {
             commissionPercentage: commissionPercentage || 0,
             shopRatings: 0,
             shopImage: "",
-            services: services ? services.filter((v, i, a) => a.findIndex(t => (t.serviceId === v.serviceId)) === i) : []
+            services: services ? [...new Set(services)].map(serviceId => ({
+                serviceId,
+                price: 0 // Default price to allow successful creation
+            })) : []
         });
 
         sendSuccess(res, 201, "Shop and User created successfully", {
@@ -325,13 +372,16 @@ export const adminUpdateShop = async (req, res) => {
                     ...(pincode && { pincode }),
                     ...(location && { location }),
                     ...(commissionPercentage !== undefined && { commissionPercentage }),
-                    ...(services && { 
-                        services: services.filter((v, i, a) => a.findIndex(t => (t.serviceId === v.serviceId)) === i) 
+                    ...(services && {
+                        services: [...new Set(services)].map(serviceId => ({
+                            serviceId,
+                            price: 0 // Default price for newly added services
+                        }))
                     }),
                 }
             },
             { new: true }
-        );
+        ).populate("services.serviceId");
 
         // 2. Update associated User
         await User.findByIdAndUpdate(shop.userId, {
@@ -343,7 +393,22 @@ export const adminUpdateShop = async (req, res) => {
             }
         });
 
-        sendSuccess(res, 200, "Shop updated successfully", updatedShop);
+        // Flatten services for response
+        const flattenedShop = {
+            ...updatedShop.toObject(),
+            services: updatedShop.services.map(s => {
+                const svc = s.toObject();
+                return {
+                    ...svc,
+                    name: s.serviceId?.name || svc.name || "Unknown Service",
+                    description: s.serviceId?.description || svc.description || "No description available",
+                    image: s.serviceId?.image || svc.image || "",
+                    isActive: s.serviceId?.isActive ?? svc.isActive ?? false
+                };
+            })
+        };
+
+        sendSuccess(res, 200, "Shop updated successfully", flattenedShop);
     } catch (error) {
         sendError(res, 500, error.message);
     }
