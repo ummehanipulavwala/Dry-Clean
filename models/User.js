@@ -61,10 +61,7 @@ const userSchema = new mongoose.Schema(
     state: {
       type: String,
     },
-    recentSearches: {
-      type: [String],
-      default: []
-    },
+
     recentlyViewedShops: [
       {
         type: mongoose.Schema.Types.ObjectId,

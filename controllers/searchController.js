@@ -6,6 +6,7 @@ import ShopDetails from "../models/Shopdetails.js";
 import User from "../models/User.js";
 import Payment from "../models/Payment.js";
 import Advertisement from "../models/advertisementModel.js";
+import Search from "../models/Search.js"; // New model
 import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 // Global Search Controller
@@ -65,15 +66,23 @@ export const searchServices = async (req, res) => {
       Advertisement.find({ title: regex }).limit(5)
     ]);
 
-    // Update recent searches
-    await User.findByIdAndUpdate(userId, {
-      $pull: { recentSearches: searchText }
+    // Save the search event to the new Search model
+    const totalCount =
+      services.length +
+      shops.length +
+      orders.length +
+      users.length +
+      feedback.length +
+      payments.length +
+      ads.length;
+
+    await Search.create({
+      userId,
+      searchText,
     });
-    await User.findByIdAndUpdate(userId, {
-      $push: {
-        recentSearches: { $each: [searchText], $position: 0, $slice: 5 }
-      }
-    });
+
+    // We no longer update User's recentSearches here. 
+    // It's handled entirely by the Search model logging above.
 
     sendSuccess(res, 200, "Search results", {
       services,
@@ -83,7 +92,7 @@ export const searchServices = async (req, res) => {
       feedback,
       payments,
       ads,
-      count: services.length + shops.length + orders.length + users.length + feedback.length + payments.length + ads.length
+      count: totalCount
     });
 
   } catch (error) {
@@ -95,9 +104,81 @@ export const searchServices = async (req, res) => {
 
 export const getRecentSearches = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("recentSearches");
+    const userId = req.user.id;
+    // We want the 5 most recent unique search texts with their IDs from the Search logs.
+    const searches = await Search.find({ userId })
+      .sort({ createdAt: -1 })
+      .select("_id searchText");
 
-    sendSuccess(res, 200, "Recent searches", user.recentSearches);
+    // Extract unique strings but keep the specific ID mapping
+    const uniqueSearches = [];
+    const seenTexts = new Set();
+
+    for (const search of searches) {
+      if (!seenTexts.has(search.searchText)) {
+        seenTexts.add(search.searchText);
+        uniqueSearches.push({
+          _id: search._id,
+          searchText: search.searchText
+        });
+      }
+      if (uniqueSearches.length === 5) break; // Limit to 5 visually
+    }
+
+    sendSuccess(res, 200, "Recent searches", uniqueSearches);
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
+};
+
+//DELETE RECENT SEARCH      DELETE /api/search/recent/:id
+export const deleteRecentSearch = async (req, res) => {
+  try {
+    const id = req.params.id?.trim();
+    const userId = req.user.id;
+
+    if (!id) {
+      return sendError(res, 400, "Search ID is required");
+    }
+
+    // Delete by specific Search log ID
+    await Search.findOneAndDelete({ _id: id, userId });
+
+    // Return the updated recent searches list
+    const searches = await Search.find({ userId })
+      .sort({ createdAt: -1 })
+      .select("_id searchText");
+
+    const uniqueSearches = [];
+    const seenTexts = new Set();
+
+    for (const search of searches) {
+      if (!seenTexts.has(search.searchText)) {
+        seenTexts.add(search.searchText);
+        uniqueSearches.push({
+          _id: search._id,
+          searchText: search.searchText
+        });
+      }
+      if (uniqueSearches.length === 5) break;
+    }
+
+    return sendSuccess(res, 200, "Recent search deleted", uniqueSearches);
+  } catch (error) {
+    return sendError(res, 500, error.message);
+  }
+};
+
+//GET SEARCH LOGS           GET /api/search/logs
+export const getSearchLogs = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // Fetch user's search history logging from Search schema, sorted by latest
+    const logs = await Search.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(50); // limit to recent 50 for performance
+
+    sendSuccess(res, 200, "Search logs retrieved", logs);
   } catch (error) {
     sendError(res, 500, error.message);
   }
