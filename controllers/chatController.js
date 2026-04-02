@@ -61,7 +61,7 @@ export const getMessages = async (req, res) => {
     const messages = await Message.find({ chatId })
       .populate("sender", "firstName lastName role")
       .populate("receiver", "firstName lastName role")
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
@@ -239,13 +239,25 @@ export const getChatHistory = async (req, res) => {
       return sendSuccess(res, 200, "No chat history found", []);
     }
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const total = await Message.countDocuments({ chatId: chat._id });
+    const totalPages = Math.ceil(total / limit);
+
     // Fetch messages for this chat
     const messages = await Message.find({ chatId: chat._id })
       .populate("sender", "firstName lastName role")
       .populate("receiver", "firstName lastName role")
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    sendSuccess(res, 200, "Chat history fetched", messages);
+    sendSuccess(res, 200, "Chat history fetched", {
+      messages,
+      pagination: { total, page, limit, totalPages },
+    });
   } catch (error) {
     sendError(res, 500, error.message);
   }
