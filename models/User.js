@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       unique: true,
       lowercase: true,
-      match: [/^\S+$/, "Spaces not allowed"]
+      match: [/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/, "Email must be in lowercase and in a valid format"]
     },
     phone: {
       type: String,

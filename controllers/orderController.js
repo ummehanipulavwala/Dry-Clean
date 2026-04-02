@@ -517,6 +517,7 @@ export const assignDeliveryAndNotify = async (req, res) => {
         order.deliveryPersonName = deliveryPerson.name;
         order.deliveryPersonPhone = deliveryPerson.phone;
         order.deliveryPerson = deliveryPersonId;
+        order.isNotified = true;
         await order.save();
 
         const customerName = `${order.customer?.firstName || ""} ${order.customer?.lastName || ""}`.trim() || "Customer";

@@ -8,13 +8,18 @@ export const signin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Check fields
     if (!email || !password) {
       return sendError(res, 400, "All fields are required");
     }
 
+    if (/[A-Z]/.test(email)) {
+      return sendError(res, 400, "Email must be in lowercase");
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
     // 2. Check user exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return sendError(res, 401, "Invalid email or password");
     }
@@ -39,13 +44,18 @@ export const signup = async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return sendError(res, 400, "Email and password are required");
     }
 
+    if (/[A-Z]/.test(email)) {
+      return sendError(res, 400, "Email must be in lowercase");
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
     // Check if user already exists
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
       return sendError(res, 400, "User already exists");
     }
@@ -55,7 +65,7 @@ export const signup = async (req, res) => {
 
     // THIS LINE STORES USER IN DATABASE
     const user = await User.create({
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       role: role || "User", // Use provided role or default
     });
@@ -189,7 +199,16 @@ export const getAllUsers = async (req, res) => {
 // FORGOT PASSWORD
 export const forgotPassword = async (req, res) => {
   try {
-    const email = req.body.email;
+    const { email } = req.body;
+    if (!email) {
+      return sendError(res, 400, "Email is required");
+    }
+
+    if (/[A-Z]/.test(email)) {
+      return sendError(res, 400, "Email must be in lowercase");
+    }
+
+    const normalizedEmail = email.toLowerCase();
     const user = await User.findOne({ email });
     if (!user) {
       return sendError(res, 404, "Email not registered");
@@ -207,6 +226,11 @@ export const createNewPassword = async (req, res) => {
   try {
     const { email, password, confirmPassword } = req.body;
 
+    if (email && /[A-Z]/.test(email)) {
+      return sendError(res, 400, "Email must be in lowercase");
+    }
+    const normalizedEmail = email?.toLowerCase();
+
     if (!password || !confirmPassword) {
       return sendError(res, 400, "All fields required");
     }
@@ -215,7 +239,7 @@ export const createNewPassword = async (req, res) => {
       return sendError(res, 400, "Passwords do not match");
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return sendError(res, 404, "User not found");
     }

@@ -37,10 +37,13 @@ export const authMiddleware = (req, res, next) => {
 
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      console.log("User role:", req.user);
+    const userRole = req.user.role?.toLowerCase();
+    const allowedRoles = roles.map(role => role.toLowerCase());
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      console.warn(`Access Denied: User ID ${req.user.id} has role "${req.user.role}", but needs one of: ${roles.join(", ")}`);
       return res.status(403).json({
-        message: "Access denied: insufficient permissions"
+        message: `Access denied: insufficient permissions. Your current role is "${req.user.role || 'unknown'}", but this action requires one of: ${roles.join(", ")}`
       });
     }
     next();

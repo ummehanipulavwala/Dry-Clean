@@ -50,7 +50,7 @@ router.put(
 );
 
 // Toggle Shop Status (Available/Unavailable)
-router.patch("/toggle-status", authMiddleware, authorizeRoles("Shop"), toggleShopStatus);
+router.patch("/toggle-status", authMiddleware, authorizeRoles("Shop", "Admin"), toggleShopStatus);
 
 // Get All Shops (Public)
 router.get("/", getAllShops);

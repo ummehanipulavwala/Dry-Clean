@@ -93,6 +93,10 @@ const orderSchema = new mongoose.Schema(
             }
         ],
         paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
+        isNotified: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

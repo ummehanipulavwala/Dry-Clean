@@ -8,26 +8,34 @@ import { sendSuccess, sendError } from "../utils/responseHandler.js";
 
 export const getDashboardStats = async (req, res) => {
     try {
-        const [totalOrders, totalPayments, totalServices, totalShops, totalFeedback, totalDeliveryPersons] = await Promise.all([
+        const [
+            totalOrders, totalPayments, totalServices, totalShops, totalFeedback, totalDeliveryPersons,
+            revenueAggregate,
+            recentOrdersRaw,
+            popularServicesRaw
+        ] = await Promise.all([
             Order.countDocuments(),
             Payment.countDocuments(),
             Service.countDocuments(),
             ShopDetails.countDocuments(),
             Feedback.countDocuments(),
-            DeliveryPerson.countDocuments()
+            DeliveryPerson.countDocuments(),
+            Payment.aggregate([
+                { $group: { _id: null, total: { $sum: "$finalAmount" } } }
+            ]),
+            Order.find()
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .populate("customer", "firstName lastName name"),
+            Order.aggregate([
+                { $unwind: "$items" },
+                { $group: { _id: "$items.itemName", count: { $sum: "$items.quantity" } } },
+                { $sort: { count: -1 } },
+                { $limit: 4 }
+            ])
         ]);
 
-        // Aggregate total revenue from payments using finalAmount
-        const revenueAggregate = await Payment.aggregate([
-            { $group: { _id: null, total: { $sum: "$finalAmount" } } }
-        ]);
         const totalRevenue = revenueAggregate.length > 0 ? revenueAggregate[0].total : 0;
-
-        // Fetch Recent Orders (latest 5)
-        const recentOrdersRaw = await Order.find()
-            .sort({ createdAt: -1 })
-            .limit(5)
-            .populate("customer", "firstName lastName name");
 
         const recentOrders = recentOrdersRaw.map(o => ({
             id: o._id.toString().slice(-4),
@@ -37,14 +45,6 @@ export const getDashboardStats = async (req, res) => {
             amount: `₹${o.totalAmount || 0}`,
             date: o.createdAt
         }));
-
-        // Calculate Popular Services (aggregating from items array)
-        const popularServicesRaw = await Order.aggregate([
-            { $unwind: "$items" },
-            { $group: { _id: "$items.itemName", count: { $sum: "$items.quantity" } } },
-            { $sort: { count: -1 } },
-            { $limit: 4 }
-        ]);
 
         const maxCount = popularServicesRaw.length > 0 ? popularServicesRaw[0].count : 1;
         const popularServices = popularServicesRaw.map(ps => ({
