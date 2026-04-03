@@ -56,6 +56,15 @@ const orderSchema = new mongoose.Schema(
                 type: String, // e.g., "10:00 AM - 12:00 PM"
             },
         },
+        deliverySchedule: {
+            date: {
+                type: Date,
+                required: true,
+            },
+            timeSlot: {
+                type: String, // e.g., "02:00 PM - 04:00 PM"
+            },
+        },
         orderStatus: {
             type: String,
             enum: [
@@ -68,6 +77,21 @@ const orderSchema = new mongoose.Schema(
                 "Completed"
             ],
             default: "Pending",
+        },
+        subtotal: {
+            type: Number,
+            required: true,
+            default: 0,
+        },
+        taxAmount: {
+            type: Number,
+            required: true,
+            default: 0,
+        },
+        deliveryFee: {
+            type: Number,
+            required: true,
+            default: 0,
         },
         totalAmount: {
             type: Number,
@@ -106,6 +130,10 @@ const orderSchema = new mongoose.Schema(
                 if (ret.pickupSchedule && ret.pickupSchedule.date) {
                     const d = new Date(ret.pickupSchedule.date);
                     ret.pickupSchedule.date = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+                }
+                if (ret.deliverySchedule && ret.deliverySchedule.date) {
+                    const d = new Date(ret.deliverySchedule.date);
+                    ret.deliverySchedule.date = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
                 }
                 if (ret.createdAt) {
                     const d = new Date(ret.createdAt);

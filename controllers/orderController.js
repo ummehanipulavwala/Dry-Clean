@@ -13,10 +13,13 @@ import { dispatchNotification } from "../utils/notificationDispatcher.js";
 // Create a new order with server-side price calculation and payment integration
 export const createOrder = async (req, res) => {
     try {
-        const { shop, services, pickupAddress, deliveryAddress, pickupSchedule, phone } = req.body;
+        const { shop, services, pickupAddress, deliveryAddress, pickupSchedule, deliverySchedule, phone } = req.body;
 
-        if (!shop || !services || !Array.isArray(services) || services.length === 0 || !pickupAddress || !deliveryAddress || !pickupSchedule) {
-            return sendError(res, 400, "Required fields: shop, services (array), pickupAddress, deliveryAddress, pickupSchedule");
+        const requiredFields = ["shop", "services", "pickupAddress", "deliveryAddress", "pickupSchedule", "deliverySchedule"];
+        const missingFields = requiredFields.filter(field => !req.body[field]);
+
+        if (missingFields.length > 0 || !Array.isArray(services) || services.length === 0) {
+            return sendError(res, 400, `Missing or invalid required fields: ${missingFields.join(", ")}${!Array.isArray(services) || services.length === 0 ? " (services must be a non-empty array)" : ""}`);
         }
 
         const user = await User.findById(req.user.id);
@@ -56,11 +59,15 @@ export const createOrder = async (req, res) => {
                 return sendError(res, 400, `Service ${item.serviceId} is not offered by this shop.`);
             }
 
-            const actualServiceId = shopService.serviceId._id ? shopService.serviceId._id : shopService.serviceId;
-            const serviceDoc = shopService.serviceId._id ? shopService.serviceId : (await Service.findById(actualServiceId));
+            if (!shopService.serviceId) {
+                return sendError(res, 400, `Service detail missing for ID: ${item.serviceId}. It may have been deleted.`);
+            }
 
-            if (!serviceDoc) {
-                return sendError(res, 400, `Service details not found for ${item.serviceId}`);
+            const serviceDoc = shopService.serviceId;
+            const actualServiceId = serviceDoc._id ? serviceDoc._id : serviceDoc;
+
+            if (serviceDoc._id && !serviceDoc.name) { // if it was populated but name is missing? unusual but possible
+                return sendError(res, 400, `Service ${item.serviceId} has incomplete data.`);
             }
 
             const price = shopService.price;
@@ -68,17 +75,22 @@ export const createOrder = async (req, res) => {
                 return sendError(res, 500, `Price not configured for service ${serviceDoc.name} in this shop.`);
             }
 
-            const subtotal = price * item.quantity;
-            totalAmount += subtotal;
+            const subtotalItem = price * item.quantity;
+            totalAmount += subtotalItem;
 
             priceBreakdown.push({
                 serviceId: actualServiceId,
                 serviceName: serviceDoc.name,
                 quantity: item.quantity,
                 pricePerUnit: price,
-                subtotal: subtotal
+                subtotal: subtotalItem
             });
         }
+
+        const subtotal = totalAmount;
+        const taxAmount = Math.round((subtotal * 0.05) * 100) / 100;
+        const deliveryFee = 0; // Static FREE delivery
+        const finalTotalAmount = subtotal + taxAmount + deliveryFee;
 
         const newOrder = await Order.create({
             customer: req.user.id,
@@ -93,7 +105,11 @@ export const createOrder = async (req, res) => {
             pickupAddress,
             deliveryAddress,
             pickupSchedule,
-            totalAmount,
+            deliverySchedule,
+            subtotal,
+            taxAmount,
+            deliveryFee,
+            totalAmount: finalTotalAmount,
             priceBreakdown // Detailed breakdown stored in order
         });
 
@@ -107,9 +123,12 @@ export const createOrder = async (req, res) => {
             orderId: newOrder._id,
             userId: req.user.id,
             shopId: shopDoc._id, // Use ShopDetails document ID
-            totalAmount,
-            finalAmount: totalAmount,
-            breakdown: priceBreakdown,
+            totalAmount: finalTotalAmount,
+            finalAmount: finalTotalAmount,
+            breakdown: priceBreakdown.map(item => ({
+                ...item,
+                tax: Math.round((item.subtotal * 0.05) * 100) / 100
+            })),
             paymentStatus: "Pending",
             platformCommissionPercent: commissionPercent,
             platformCommissionAmount,
@@ -168,8 +187,12 @@ export const calculatePrice = async (req, res) => {
                 return sendError(res, 400, `Service ${item.serviceId} is not offered by this shop.`);
             }
 
-            const actualServiceId = shopService.serviceId._id ? shopService.serviceId._id : shopService.serviceId;
-            const serviceDoc = shopService.serviceId._id ? shopService.serviceId : (await Service.findById(actualServiceId));
+            if (!shopService.serviceId) {
+                return sendError(res, 400, `Service detail missing for ID: ${item.serviceId}. It may have been deleted.`);
+            }
+
+            const serviceDoc = shopService.serviceId;
+            const actualServiceId = serviceDoc._id ? serviceDoc._id : serviceDoc;
 
             const price = shopService.price || 0;
             const subtotal = price * item.quantity;
@@ -184,9 +207,17 @@ export const calculatePrice = async (req, res) => {
             });
         }
 
+        const subtotal = totalAmount;
+        const taxAmount = Math.round((subtotal * 0.05) * 100) / 100;
+        const deliveryFee = 0;
+        const finalTotalAmount = subtotal + taxAmount + deliveryFee;
+
         sendSuccess(res, 200, "Price calculated successfully", {
+            subtotal,
+            taxAmount,
+            deliveryFee,
+            totalAmount: finalTotalAmount,
             breakdown,
-            totalAmount,
             currency: "INR"
         });
     } catch (error) {
