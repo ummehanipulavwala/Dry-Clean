@@ -62,7 +62,7 @@ export const getMyShopDetails = async (req, res) => {
 // Update Shop Details
 export const updateShopDetails = async (req, res) => {
     try {
-        const { shopName, shopAddress, shopRatings, status } = req.body;
+        const { shopName, shopAddress, shopRatings, status, services } = req.body;
         const userId = req.user.id;
         const user = await User.findById(userId);
 
@@ -73,6 +73,26 @@ export const updateShopDetails = async (req, res) => {
             ...(status && { status }),
             ...(user?.phone && { phone: user.phone }),
         };
+
+        if (services) {
+            // Handle if services are sent as stringified JSON due to form-data
+            let parsedServices = services;
+            if (typeof services === 'string') {
+                try {
+                    parsedServices = JSON.parse(services);
+                } catch (e) {
+                    parsedServices = [];
+                }
+            }
+            if (Array.isArray(parsedServices)) {
+                updateData.services = parsedServices.map(s => {
+                    if (typeof s === 'object' && s.serviceId) {
+                        return { serviceId: s.serviceId, price: s.price || 0 };
+                    }
+                    return { serviceId: s, price: 0 };
+                }).filter((v, i, a) => a.findIndex(t => t.serviceId.toString() === v.serviceId.toString()) === i);
+            }
+        }
 
         if (req.files && req.files.length > 0) {
             updateData.shopImage = `/uploads/profiles/${req.files[0].filename}`;
@@ -119,8 +139,46 @@ export const toggleShopStatus = async (req, res) => {
 // Get All Shops (Public)
 export const getAllShops = async (req, res) => {
     try {
-        const shops = await ShopDetails.find().populate("userId", "firstName lastName email city");
-        sendSuccess(res, 200, "Shops fetched successfully", shops);
+        const shops = await ShopDetails.find()
+            .populate("userId", "firstName lastName email city")
+            .populate("services.serviceId");
+
+        // Flatten services for frontend — with manual fallback
+        const allServices = await Service.find();
+        const serviceMap = {};
+        allServices.forEach(svc => { serviceMap[svc._id.toString()] = svc; });
+
+        const enrichedShops = shops.map(shop => {
+            const flattenedServices = (shop.services || []).map(s => {
+                const svc = s.toObject ? s.toObject() : s;
+                const serviceRef = s.serviceId;
+
+                const isPopulated = serviceRef && typeof serviceRef === 'object' && serviceRef.name;
+                const serviceIdStr = isPopulated
+                    ? (serviceRef._id || serviceRef.id)?.toString()
+                    : (serviceRef ? serviceRef.toString() : null);
+
+                const fallback = (serviceIdStr && serviceMap[serviceIdStr]) ? serviceMap[serviceIdStr] : null;
+                const resolved = isPopulated ? serviceRef : fallback;
+
+                return {
+                    ...svc,
+                    name: resolved?.name || "Unknown Service",
+                    description: resolved?.description || "No description available",
+                    image: resolved?.image || "",
+                    isActive: resolved?.isActive ?? false,
+                    category: resolved?.category || "General",
+                    subCategory: resolved?.subCategory || "General"
+                };
+            });
+
+            return {
+                ...shop.toObject(),
+                services: flattenedServices
+            };
+        });
+
+        sendSuccess(res, 200, "Shops fetched successfully", enrichedShops);
     } catch (error) {
         sendError(res, 500, error.message);
     }
@@ -170,19 +228,26 @@ export const getShopById = async (req, res) => {
         allServices.forEach(svc => { serviceMap[svc._id.toString()] = svc; });
 
         const flattenedServices = shop.services.map(s => {
-            const svc = s.toObject();
-            const populated = s.serviceId && typeof s.serviceId === 'object' ? s.serviceId : null;
-            const rawId = svc.serviceId?.toString() || svc._id?.toString();
-            const fallback = rawId ? serviceMap[rawId] : null;
-            const resolved = populated || fallback;
+            const svc = s.toObject ? s.toObject() : s;
+            const serviceRef = s.serviceId;
+
+            // Check if serviceId is a populated object or just an ObjectId string
+            const isPopulated = serviceRef && typeof serviceRef === 'object' && serviceRef.name;
+            const serviceIdStr = isPopulated
+                ? (serviceRef._id || serviceRef.id)?.toString()
+                : (serviceRef ? serviceRef.toString() : null);
+
+            const fallback = (serviceIdStr && serviceMap[serviceIdStr]) ? serviceMap[serviceIdStr] : null;
+            const resolved = isPopulated ? serviceRef : fallback;
+
             return {
                 ...svc,
-                name: resolved?.name || svc.name || "Unknown Service",
-                description: resolved?.description || svc.description || "No description available",
-                image: resolved?.image || svc.image || "",
-                isActive: resolved?.isActive ?? svc.isActive ?? false,
-                category: resolved?.category || svc.category || "General",
-                subCategory: resolved?.subCategory || svc.subCategory || "General"
+                name: resolved?.name || "Unknown Service",
+                description: resolved?.description || "No description available",
+                image: resolved?.image || "",
+                isActive: resolved?.isActive ?? false,
+                category: resolved?.category || "General",
+                subCategory: resolved?.subCategory || "General"
             };
         });
 
@@ -252,17 +317,23 @@ export const getAdminShops = async (req, res) => {
                     totalOrders: totalOrders,
                     services: (shop.services || []).map(s => {
                         const svc = s.toObject ? s.toObject() : s;
-                        // Try populated ref first, then fall back to manual id match
-                        const populated = s.serviceId && typeof s.serviceId === 'object' ? s.serviceId : null;
-                        const rawId = svc.serviceId?.toString() || svc._id?.toString();
-                        const fallback = rawId ? serviceMap[rawId] : null;
-                        const resolved = populated || fallback;
+                        const serviceRef = s.serviceId;
+
+                        // Check if serviceId is a populated object or just an ObjectId string
+                        const isPopulated = serviceRef && typeof serviceRef === 'object' && serviceRef.name;
+                        const serviceIdStr = isPopulated
+                            ? (serviceRef._id || serviceRef.id)?.toString()
+                            : (serviceRef ? serviceRef.toString() : null);
+
+                        const fallback = (serviceIdStr && serviceMap[serviceIdStr]) ? serviceMap[serviceIdStr] : null;
+                        const resolved = isPopulated ? serviceRef : fallback;
+
                         return {
                             ...svc,
-                            name: resolved?.name || svc.name || "Unknown Service",
-                            description: resolved?.description || svc.description || "No description available",
-                            image: resolved?.image || svc.image || "",
-                            isActive: resolved?.isActive ?? svc.isActive ?? false
+                            name: resolved?.name || "Unknown Service",
+                            description: resolved?.description || "No description available",
+                            image: resolved?.image || "",
+                            isActive: resolved?.isActive ?? false
                         };
                     })
                 };
@@ -313,6 +384,16 @@ export const adminCreateShop = async (req, res) => {
             status: "Active"
         });
 
+        let formattedServices = [];
+        if (services && Array.isArray(services)) {
+            formattedServices = services.map(s => {
+                if (typeof s === 'object' && s.serviceId) {
+                    return { serviceId: s.serviceId, price: s.price || 0 };
+                }
+                return { serviceId: s, price: 0 };
+            }).filter((v, i, a) => a.findIndex(t => t.serviceId.toString() === v.serviceId.toString()) === i);
+        }
+
         // 3. Create Shop Details linked to this user
         const shopDetails = await ShopDetails.create({
             userId: newUser._id,
@@ -324,10 +405,7 @@ export const adminCreateShop = async (req, res) => {
             commissionPercentage: commissionPercentage || 0,
             shopRatings: 0,
             shopImage: "",
-            services: services ? [...new Set(services)].map(serviceId => ({
-                serviceId,
-                price: 0 // Default price to allow successful creation
-            })) : []
+            services: formattedServices
         });
 
         sendSuccess(res, 201, "Shop and User created successfully", {
@@ -361,6 +439,22 @@ export const adminUpdateShop = async (req, res) => {
             return sendError(res, 404, "Shop details not found");
         }
 
+        let formattedServices;
+        if (services && Array.isArray(services)) {
+            // Check if existing services need to retain their prices
+            const existingServicesMap = {};
+            (shop.services || []).forEach(s => {
+                existingServicesMap[s.serviceId.toString()] = s.price;
+            });
+
+            formattedServices = services.map(s => {
+                if (typeof s === 'object' && s.serviceId) {
+                    return { serviceId: s.serviceId, price: s.price !== undefined ? s.price : (existingServicesMap[s.serviceId.toString()] || 0) };
+                }
+                return { serviceId: s, price: existingServicesMap[s.toString()] || 0 };
+            }).filter((v, i, a) => a.findIndex(t => t.serviceId.toString() === v.serviceId.toString()) === i);
+        }
+
         // 1. Update ShopDetails
         const updatedShop = await ShopDetails.findByIdAndUpdate(
             id,
@@ -372,12 +466,7 @@ export const adminUpdateShop = async (req, res) => {
                     ...(pincode && { pincode }),
                     ...(location && { location }),
                     ...(commissionPercentage !== undefined && { commissionPercentage }),
-                    ...(services && {
-                        services: [...new Set(services)].map(serviceId => ({
-                            serviceId,
-                            price: 0 // Default price for newly added services
-                        }))
-                    }),
+                    ...(formattedServices && { services: formattedServices }),
                 }
             },
             { new: true }
@@ -397,13 +486,19 @@ export const adminUpdateShop = async (req, res) => {
         const flattenedShop = {
             ...updatedShop.toObject(),
             services: updatedShop.services.map(s => {
-                const svc = s.toObject();
+                const svc = s.toObject ? s.toObject() : s;
+                const serviceRef = s.serviceId;
+
+                // Since this was just populated, serviceRef should be the object
+                const isPopulated = serviceRef && typeof serviceRef === 'object' && serviceRef.name;
+                const resolved = isPopulated ? serviceRef : null;
+
                 return {
                     ...svc,
-                    name: s.serviceId?.name || svc.name || "Unknown Service",
-                    description: s.serviceId?.description || svc.description || "No description available",
-                    image: s.serviceId?.image || svc.image || "",
-                    isActive: s.serviceId?.isActive ?? svc.isActive ?? false
+                    name: resolved?.name || "Unknown Service",
+                    description: resolved?.description || "No description available",
+                    image: resolved?.image || "",
+                    isActive: resolved?.isActive ?? false
                 };
             })
         };
