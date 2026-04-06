@@ -163,6 +163,8 @@ export const getAllShops = async (req, res) => {
 
                 return {
                     ...svc,
+                    serviceId: serviceIdStr,
+                    price: svc.price > 0 ? svc.price : (resolved?.price || 0),
                     name: resolved?.name || "Unknown Service",
                     description: resolved?.description || "No description available",
                     image: resolved?.image || "",
@@ -242,6 +244,8 @@ export const getShopById = async (req, res) => {
 
             return {
                 ...svc,
+                serviceId: serviceIdStr,
+                price: svc.price > 0 ? svc.price : (resolved?.price || 0),
                 name: resolved?.name || "Unknown Service",
                 description: resolved?.description || "No description available",
                 image: resolved?.image || "",
@@ -330,6 +334,8 @@ export const getAdminShops = async (req, res) => {
 
                         return {
                             ...svc,
+                            serviceId: serviceIdStr,
+                            price: svc.price > 0 ? svc.price : (resolved?.price || 0),
                             name: resolved?.name || "Unknown Service",
                             description: resolved?.description || "No description available",
                             image: resolved?.image || "",
@@ -491,10 +497,15 @@ export const adminUpdateShop = async (req, res) => {
 
                 // Since this was just populated, serviceRef should be the object
                 const isPopulated = serviceRef && typeof serviceRef === 'object' && serviceRef.name;
+                const serviceIdStr = isPopulated
+                    ? (serviceRef._id || serviceRef.id)?.toString()
+                    : (serviceRef ? serviceRef.toString() : null);
                 const resolved = isPopulated ? serviceRef : null;
 
                 return {
                     ...svc,
+                    serviceId: serviceIdStr,
+                    price: svc.price > 0 ? svc.price : (resolved?.price || 0),
                     name: resolved?.name || "Unknown Service",
                     description: resolved?.description || "No description available",
                     image: resolved?.image || "",
