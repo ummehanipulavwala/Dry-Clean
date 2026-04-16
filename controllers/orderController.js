@@ -70,7 +70,19 @@ export const createOrder = async (req, res) => {
                 return sendError(res, 400, `Service ${item.serviceId} has incomplete data.`);
             }
 
-            const price = shopService.price;
+            // Fallback strategy: 
+            // 1. item.price (if provided via request)
+            // 2. shopService.price (if > 0, i.e. custom shop price)
+            // 3. serviceDoc.price (base global service price)
+            let price = 0;
+            if (item.price !== undefined && item.price !== null) {
+                price = Number(item.price);
+            } else if (shopService.price > 0) {
+                price = shopService.price;
+            } else {
+                price = serviceDoc.price || 0;
+            }
+
             if (price === undefined || price === null) {
                 return sendError(res, 500, `Price not configured for service ${serviceDoc.name} in this shop.`);
             }
@@ -194,7 +206,18 @@ export const calculatePrice = async (req, res) => {
             const serviceDoc = shopService.serviceId;
             const actualServiceId = serviceDoc._id ? serviceDoc._id : serviceDoc;
 
-            const price = shopService.price || 0;
+            // Fallback strategy: 
+            // 1. item.price (if provided via request)
+            // 2. shopService.price (if > 0, i.e. custom shop price)
+            // 3. serviceDoc.price (base global service price)
+            let price = 0;
+            if (item.price !== undefined && item.price !== null) {
+                price = Number(item.price);
+            } else if (shopService.price > 0) {
+                price = shopService.price;
+            } else {
+                price = serviceDoc.price || 0;
+            }
             const subtotal = price * item.quantity;
             totalAmount += subtotal;
 
